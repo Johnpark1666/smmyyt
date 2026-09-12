@@ -1,0 +1,41 @@
+{
+  // SUMMARIZER Cloudflare Worker — DB(R2) + 뷰어(Static Assets) + API(sync)
+  //
+  // SMMYNP의 vercel-deploy/ 폴더를 Cloudflare로 이전.
+  // 단일 Worker가 다음 3가지를 한 번에 제공:
+  //   1. 정적 뷰어 (./public/*) — /index.html, /server-console.html
+  //   2. /api/sync 엔드포인트 (./src/index.js) — src/index.js의 fetch 핸들러
+  //   3. R2 버킷 (SUMMARIZER_BUCKET) — DB 저장소 (videos/repos/settings JSON)
+  //
+  // 배포: `wrangler deploy` (Account ID는 secrets 또는 wrangler.toml/account_id에)
+  // 첫 배포 전 필요 작업:
+  //   wrangler r2 bucket create <버킷명>          (버킷 생성)
+  //   wrangler secret put CLOUDFLARE_ACCOUNT_ID   (선택 — 다계정 충돌 방지)
+  //   wrangler secret put R2_PUBLIC_URL           (필수 — public 버킷 주소)
+  //     R2_PUBLIC_URL: R2 대시보드 → 버킷 → Settings → Public Access의 공개 주소
+  //     (예: https://pub-xxxx.r2.dev) — src/index.js의 r2PublicUrl()이 이 값 사용.
+  //     secret으로 넣으면 코드/설정 파일에 URL이 하드코딩되지 않아 안전.
+  "name": "smmynp-sync",
+  "main": "src/index.js",
+  "compatibility_date": "2025-04-01",
+
+  // 뷰어 정적 자산 — Worker가 직접 서빙 (env 전달 위해 run_worker_first 사용 안 함)
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page"
+  },
+
+  // DB — Cloudflare R2 (Vercel Blob 대체)
+  "r2_buckets": [
+    {
+      "binding": "SUMMARIZER_BUCKET",
+      "bucket_name": "summarizer-data"
+    }
+  ],
+
+  // 캐시/CORS 헤더
+  "observability": {
+    "enabled": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "smmynp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd client && npm run build",
+    "tauri": "npx @tauri-apps/cli",
+    "tauri:dev": "npx @tauri-apps/cli dev",
+    "tauri:build": "npx @tauri-apps/cli build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2"
+  }
+}

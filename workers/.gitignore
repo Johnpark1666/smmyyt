@@ -1,0 +1,21 @@
+# Cloudflare Worker 빌드 산출물
+.wrangler/
+node_modules/
+dist/
+
+# 로컬 환경 (API Token 등)
+.dev.vars
+.dev.vars.*
+
+# 시크릿
+*.local
+secrets/
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+# 로컬 마이그레이션 임시 데이터
+_migration/
+videos.json

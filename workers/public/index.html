@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#121212">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png">
+<title>SUMMARIZER Web Viewer</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Outfit', sans-serif; background: #fff; color: #121212; }
+  .topbar { position: sticky; top: 0; z-index: 50; background: #fff; border-bottom: 2px solid #121212; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { font-size: 18px; font-weight: 800; letter-spacing: 0.03em; padding: 12px 20px; }
+  .tabs { display: flex; height: 70px; flex: 1; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #121212; transition: 0.15s; font-family: inherit; }
+  .tab svg { width: 24px; height: 24px; }
+  .tab.active { background: rgba(79,70,229,0.06); color: #4f46e5; }
+  .tab.active svg { opacity: 1; } .tab svg { opacity: 0.55; }
+  .toolbar { padding: 10px 20px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #d4d4d8; flex-wrap: wrap; }
+  .btn { padding: 7px 14px; font-size: 12px; font-weight: 700; border: 2px solid #121212; background: #fff; cursor: pointer; }
+  .btn.dark { background: #121212; color: #fff; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; padding: 24px 20px; }
+  .card { border-bottom: 2px solid #121212; background: #fff; overflow: hidden; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; display: flex; flex-direction: column; }
+  .card:hover { transform: translate(-4px, -4px); box-shadow: 4px 4px 0 rgba(0,0,0,0.2); z-index: 2; position: relative; }
+  .card .thumb-wrap { aspect-ratio: 16/9; overflow: hidden; border-bottom: 2px solid #121212; background: #f0f0f0; position: relative; }
+  .card .thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .dur { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.75); color: #fff; padding: 2px 6px; font-size: 10px; font-weight: 600; }
+  .card .body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .card .title { font-size: 14.5px; font-weight: 800; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .meta { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+  .card .meta .chan { color: #0d9488; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .kw { font-size: 10px; font-weight: 600; color: #6b7280; border: 1px solid #d4d4d8; padding: 1px 8px; border-radius: 999px; }
+  .card .kws { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 16px 12px; }
+  .list-row { display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-bottom: 1px solid #e5e7eb; cursor: pointer; transition: background 0.12s; }
+  .list-row:hover { background: #f0fdf4; }
+  .list-row .thumb { width: 88px; height: 50px; object-fit: cover; background: #f0f0f0; flex-shrink: 0; border-radius: 4px; }
+  .list-row .info { flex: 1; min-width: 0; }
+  .list-row .title { font-size: 14px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list-row .sub { display: flex; align-items: center; gap: 8px; margin-top: 3px; font-size: 11px; color: #6b7280; overflow: hidden; white-space: nowrap; }
+  .list-row .sub .chan { color: #0d9488; font-weight: 600; }
+  .list-row .sub .kw { color: #0d9488; flex-shrink: 0; }
+  .list-row .date { font-size: 10px; color: #6b7280; flex-shrink: 0; white-space: nowrap; }
+  .list-row .act { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .list-row .act button { width: 32px; height: 32px; border: none; background: transparent; cursor: pointer; font-size: 13px; color: #6b7280; border-radius: 4px; }
+  .list-row .act button.read:hover { background: #16a34a; color: #fff; }
+  .list-row .act button.read.on { color: #16a34a; }
+  .list-row .act button.fav:hover { background: #f59e0b; color: #fff; }
+  .list-row .act button.fav.on { background: #f59e0b; color: #fff; }
+  .list-row .act button.del:hover { background: #dc2626; color: #fff; }
+  .tag { font-size: 10px; padding: 2px 8px; border: 1.5px solid #121212; border-radius: 999px; background: #fff; white-space: nowrap; }
+  .card.selected, .list-row.selected { outline: 3px solid #4f46e5; outline-offset: -3px; }
+  .selbox { position: absolute; top: 10px; left: 10px; z-index: 10; width: 24px; height: 24px; background: #fff; border: 2px solid #121212; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #121212; cursor: pointer; }
+  .selbox.on { background: #4f46e5; color: #fff; }
+  .card { position: relative; }
+  .card .act { display: flex; border-top: 2px solid #121212; }
+  .card .act button { flex: 1; padding: 8px 0; font-size: 11px; font-weight: 700; border: none; background: #fff; cursor: pointer; border-right: 1px solid #d4d4d8; }
+  .card .act button:last-child { border-right: none; }
+  .card .act .read { color: #16a34a; } .card .act .read.on { background: #16a34a; color: #fff; }
+  .card .act .read:hover { background: #16a34a; color: #fff; }
+  .card .act .fav { color: #d97706; } .card .act .fav.on { background: #f59e0b; color: #fff; }
+  .card .act .fav:hover { background: #f59e0b; color: #fff; }
+  .card .act .del { color: #dc2626; }
+  .card .act .del:hover { background: #dc2626; color: #fff; }
+  .detail-overlay { position: fixed; top: 70px; right: 0; width: 720px; height: calc(100vh - 70px); z-index: 100; display: none; flex-direction: column; background: #fff; border-left: 2px solid #121212; box-shadow: -4px 0 0 rgba(0,0,0,0.08); }
+  .detail-overlay.open { display: flex; }
+  .detail { flex: 1; overflow-y: auto; background: #fff; }
+  /* 리사이즈 핸들 (좌측 가장자리) */
+  .detail-resize { position: absolute; left: -5px; top: 0; width: 10px; height: 100%; cursor: col-resize; z-index: 101; }
+  .m-actions { display: none; }  /* 모바일 전용 — 데스크톱에선 숨김 */
+  .detail-resize:hover { background: rgba(79,70,229,0.15); }
+  /* 상세 액션 버튼 hover — 배경 채우기 (홈 탭 동일) */
+  .detail-overlay .dact { transition: background 0.15s, color 0.15s; }
+  .detail-overlay .dact.read:hover { background: #16a34a !important; color: #fff !important; }
+  .detail-overlay .dact.fav:hover { background: #f59e0b !important; color: #fff !important; }
+  .detail-overlay .dact.gh:hover { background: #2a2a2a !important; color: #fff !important; }
+  .detail .dhead { padding: 14px 18px; border-bottom: 2px solid #121212; display: flex; align-items: flex-start; gap: 12px; }
+  .detail .dhead .dtitle { flex: 1; font-size: 17px; font-weight: 800; line-height: 1.35; }
+  .detail .dhead .dclose { font-size: 20px; font-weight: 800; border: 2px solid #121212; background: #fff; width: 34px; height: 34px; cursor: pointer; flex-shrink: 0; }
+  .detail .dmeta { padding: 10px 18px; font-size: 11.5px; color: #6b7280; border-bottom: 1px solid #d4d4d8; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .detail .dactions { display: flex; border-bottom: 2px solid #121212; }
+  .detail .dactions button { flex: 1; padding: 10px 0; font-size: 12px; font-weight: 700; border: none; background: #fff; cursor: pointer; border-right: 1px solid #d4d4d8; }
+  .detail .dactions button:last-child { border-right: none; }
+  .section { border-bottom: 1px solid #e5e7eb; }
+  .section .shead { display: flex; align-items: center; gap: 10px; padding: 11px 18px; background: #fafafa; }
+  .section .shead .bar { width: 4px; height: 16px; background: #0d9488; }
+  .section .shead span { font-weight: 800; font-size: 13.5px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .section .sbody { padding: 14px 18px; font-size: 13px; line-height: 1.65; }
+  /* ── detail-body — 홈 탭과 동일 (h3/테이블/코드/인용구) ── */
+  .detail-body { line-height: 1.5; }
+  .detail-body h3 { background: var(--sec-color, #0d9488); color: #fff; font-size: 13px; font-weight: 800; padding: 7px 14px; margin: 20px 0 12px; border: 2px solid #121212; box-shadow: 3px 3px 0 rgba(18,18,18,0.9); letter-spacing: 0.02em; display: block; }
+  .detail-body h3 + br { display: none; }
+  .detail-body h3:first-child { margin-top: 0; }
+  .detail-body .dt-bullet { display: block; padding-left: 12px; margin: 2px 0; position: relative; }
+  .detail-body .dt-bullet::before { content: ''; position: absolute; left: 0; top: 3px; bottom: 3px; width: 4px; background: var(--sec-color, #0d9488); border: 1.5px solid #121212; }
+  .detail-body br + .dt-bullet { margin-top: 3px; }
+  .detail-body table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; border: 2px solid #121212; box-shadow: 3px 3px 0 rgba(18,18,18,0.9); background: #fff; }
+  .detail-body table + br, .detail-body br + table { display: none; }
+  .detail-body table th, .detail-body table td { border: 1px solid #121212; padding: 6px 10px; text-align: left; }
+  .detail-body table th { background: #121212; color: #fff; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .detail-body table tr:nth-child(even) td { background: #fafafa; }
+  .detail-body b { color: var(--sec-color, #0d9488); font-weight: 800; background: color-mix(in srgb, var(--sec-color, #0d9488) 8%, transparent); padding: 0 2px; }
+  .detail-body b b { color: inherit; background: none; padding: 0; }
+  .detail-body pre { background: #1a1a1a; color: #e8e8e8; padding: 10px 14px; margin: 10px 0; border: 2px solid #121212; box-shadow: 3px 3px 0 rgba(18,18,18,0.9); overflow-x: auto; font-size: 11.5px; line-height: 1.6; }
+  .detail-body pre code { background: transparent; color: inherit; padding: 0; white-space: pre; }
+  .detail-body code { background: #f1f5f9; color: #dc2626; padding: 1px 5px; font-size: 0.92em; border: 1px solid #d4d4d8; }
+  .detail-body blockquote { display: block; margin: 8px 0; padding: 2px 0 2px 16px; border-left: 3px solid var(--sec-color, #0d9488); font-size: 13px; color: var(--sec-color, #0d9488); font-style: italic; font-weight: 600; line-height: 1.5; }
+  .detail-body blockquote b { background: none; padding: 0; color: inherit; }
+  .detail-body blockquote + br { display: none; }
+  .section .sbody h3 { background: #0d9488; color: #fff; font-size: 12.5px; font-weight: 800; padding: 6px 12px; margin: 14px 0 10px; border: 2px solid #121212; display: inline-block; box-shadow: 3px 3px 0 rgba(0,0,0,0.9); }
+  .section .sbody h3:first-child { margin-top: 0; }
+  .section .sbody .dt-bullet { display: block; padding-left: 14px; margin: 3px 0; position: relative; }
+  .section .sbody .dt-bullet::before { content: ''; position: absolute; left: 0; top: 3px; bottom: 3px; width: 4px; background: #0d9488; border: 1.5px solid #121212; }
+  .section .sbody b { color: #0d9488; }
+  .section .sbody table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; border: 2px solid #121212; box-shadow: 3px 3px 0 rgba(0,0,0,0.9); }
+  .section .sbody table th, .section .sbody table td { border: 1px solid #121212; padding: 5px 9px; text-align: left; }
+  .section .sbody table th { background: #121212; color: #fff; }
+  .section .sbody pre { background: #1a1a1a; color: #e8e8e8; padding: 9px 12px; margin: 8px 0; border: 2px solid #121212; overflow-x: auto; font-size: 11.5px; }
+  .section .sbody blockquote { margin: 8px 0; padding: 2px 0 2px 14px; border-left: 3px solid #0d9488; font-style: italic; color: #0d9488; font-weight: 600; }
+  .section.analysis .shead .bar { background: #7c3aed; } .section.analysis .sbody b { color: #7c3aed; } .section.analysis .sbody h3 { background: #7c3aed; }
+  .section.insights .shead .bar { background: #d97706; } .section.insights .sbody b { color: #d97706; } .section.insights .sbody h3 { background: #d97706; }
+  .section.timeline .shead .bar { background: #e11d48; } .section.timeline .sbody b { color: #e11d48; } .section.timeline .sbody h3 { background: #e11d48; }
+  .section.keywords .shead .bar { background: #dc2626; } 
+  .tl-list { display: flex; flex-direction: column; gap: 6px; }
+  .tl-chip { display: inline-block; background: #e11d48; color: #fff; font-weight: 800; font-size: 11px; padding: 2px 10px; border-radius: 999px; border: 1.5px solid #121212; margin-right: 6px; }
+  .tl-desc { font-size: 12.5px; color: #121212; }
+  .kw-caps { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kw-caps .kw { font-size: 11px; padding: 3px 10px; border: 1.5px solid #dc2626; color: #dc2626; border-radius: 999px; background: #fff; }
+  .empty { text-align: center; padding: 60px 20px; color: #9ca3af; font-size: 14px; }
+  /* ── 모바일 (≤768px): 하단 탭 고정 + 상세 전체화면 ── */
+  @media (max-width: 768px) {
+    body { padding-bottom: 62px; }
+    .topbar { flex-direction: column; }
+    .topbar h1 { padding: 10px 16px; font-size: 15px; align-self: flex-start; }
+    .tabs { position: fixed; bottom: 0; left: 0; right: 0; height: 56px; z-index: 200; background: #fff; border-top: 2px solid #121212; padding-bottom: env(safe-area-inset-bottom); box-sizing: content-box; }
+    .tab { font-size: 11px; }
+    .tab svg { width: 20px; height: 20px; }
+    .floatbar { right: 12px; padding: 4px 6px; gap: 2px; }  /* bottom은 JS가 하단 탭 위치 감지해 설정 */
+    /* 맨 위로 버튼 — 데스크톱/모바일 공용 (플로팅바 위) */
+    #topBtn {  /* 상세 페이지 전용 (목록은 floatbar의 ▲ 사용) */
+      position: fixed; right: 14px; bottom: 24px; width: 40px; height: 40px;
+      border-radius: 50%; border: 2px solid #121212; background: #fff; color: #121212;
+      font-size: 16px; cursor: pointer; z-index: 2001; display: none;
+      align-items: center; justify-content: center;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.18); transition: opacity 0.15s;
+      opacity: 0.92;
+    }
+    #topBtn:hover { opacity: 1; background: #121212; color: #fff; }
+    .tl-box { max-height: 150px !important; }  /* 타임라인 모바일 5개 제한 + 내부 스크롤 */
+    .floatbar select { display: none; }  /* 카테고리는 모바일에서 숨김 (폭 절약) */
+    .floatbar input { width: 90px; padding: 5px 8px; font-size: 11px; }
+    .floatbar button { width: 30px; height: 30px; font-size: 13px; }
+    .floatbar .sep { height: 20px; }
+    .floatbar .count { font-size: 10px; }
+    .detail-overlay { top: 0 !important; left: 0; width: 100vw; height: 100vh; height: 100dvh; border-left: none; }
+    .detail-resize { display: none; }
+    .card-grid { grid-template-columns: 1fr; padding: 12px; }
+    .list-row { padding: 10px 12px; }
+    .detail .sec-h { padding: 10px 14px; }
+    /* 모바일: 상세 제목 축소 */
+    .detail-overlay .dtitle-c { font-size: 15px !important; }
+    .detail-overlay .dmeta-c { font-size: 10px !important; }
+    /* 모바일: 히어로 액션바 숨김 (하단 액션바로 대체) */
+    .detail-overlay .hero-actions { display: none !important; }
+    /* 모바일: 하단 액션바(52px)가 콘텐츠를 가리지 않게 여백 */
+    .detail-overlay .detail { padding-bottom: 66px; }
+    /* 모바일 상세 하단 액션바 */
+    .m-actions { display: flex !important; }
+    .m-actions { height: 42px; }
+    .m-actions button { flex: 1; padding: 6px 2px; font-size: 10px; font-weight: 700; border: none; border-right: 1px solid #d4d4d8; background: #fff; cursor: pointer; font-family: inherit; }
+    .m-actions button:last-child { border-right: none; }
+    .m-actions .nav-prev, .m-actions .nav-next { background: #f6f6f8; font-size: 15px; flex: 0 0 40px; color: #121212; }
+    .m-actions .read { color: #16a34a; }
+    .m-actions .read.on { background: #16a34a; color: #fff; }
+    .m-actions .fav { color: #f59e0b; }
+    .m-actions .fav.on { background: #f59e0b; color: #fff; }
+    .m-actions .yt { color: #dc2626; }
+  }
+  .floatbar { position: fixed; bottom: 24px; right: 24px; z-index: 500; display: flex; align-items: center; gap: 4px; background: #fff; border-bottom: 2px solid #121212; box-shadow: 4px 4px 0 rgba(0,0,0,0.25); padding: 6px 10px; }
+  .floatbar input { width: 140px; padding: 6px 10px; border: none; border-bottom: 2px solid #121212; background: transparent; outline: none; font-size: 12px; font-weight: 600; color: #121212; font-family: inherit; }
+  .floatbar .sep { width: 2px; height: 24px; background: #121212; }
+  .floatbar button { width: 36px; height: 36px; border: none; background: transparent; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; color: #121212; transition: 0.15s; font-family: inherit; }
+  .floatbar button:hover { background: #f0f0f0; }
+  .floatbar .count { font-size: 11px; font-weight: 700; color: #6b7280; padding: 0 6px; }
+  .setup-box { max-width: 620px; margin: 60px auto; padding: 30px; border: 2px solid #121212; box-shadow: 6px 6px 0 rgba(0,0,0,0.2); }
+  .setup-box h2 { font-size: 18px; margin-bottom: 14px; }
+  .setup-box label { display: block; font-size: 12px; font-weight: 700; margin: 12px 0 4px; }
+  .setup-box input { width: 100%; padding: 9px 12px; font-size: 13px; border: 2px solid #121212; outline: none; font-family: inherit; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .status-dot.ok { background: #16a34a; } .status-dot.err { background: #dc2626; }
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <h1>SUMMARIZER <span style="font-weight:400;font-size:12px;color:#6b7280">WEB VIEWER</span></h1>
+  <div class="tabs" id="tabs"></div>
+</div>
+
+<div class="toolbar" id="toolbar" style="display:none">
+  <span id="count" style="font-size:12px;color:#6b7280"></span>
+</div>
+
+<div id="content"></div>
+
+<!-- 맨 위로 버튼 -->
+<button id="topBtn" title="맨 위로" onclick="window.scrollTo({top:0,behavior:'smooth'})">▲</button>
+
+<div class="floatbar" id="floatbar">
+  <select id="catFilter" title="카테고리 필터" onchange="state.cat=this.value;render()" style="padding:6px 8px;font-size:11px;border:none;border-bottom:2px solid #121212;background:transparent;font-family:inherit;color:#121212;font-weight:600;max-width:110px;outline:none">
+    <option value="">전체</option>
+  </select>
+  <div class="sep"></div>
+  <input id="fsearch" placeholder="" oninput="state.q=this.value;render()">
+  <div class="sep"></div>
+  <button id="fview" title="뷰 전환" onclick="toggleView()"></button>
+  <div class="sep"></div>
+  <button id="fsel" title="전체 선택" onclick="toggleSelectAll()">☐</button>
+  <button id="fdel" title="선택 항목 지우기" onclick="deleteSelected()" style="color:#dc2626">🗑</button>
+  <div class="sep"></div>
+  <button id="fTop" title="맨 위로" onclick="window.scrollTo({top:0,behavior:'smooth'})">▲</button>
+  <span class="count" id="fcount"></span>
+</div>
+
+<!-- ── 서버 조작 패널 (미니 PC LAN 서버 전용) ── -->
+<div id="serverPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:400;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+  <div style="width:min(800px,96vw);background:#fff;border:2px solid #121212;box-shadow:6px 6px 0 rgba(0,0,0,0.25);max-height:92vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:2px solid #121212;flex-shrink:0">
+      <span style="font-size:15px;font-weight:800;color:#121212">서버 조작 <span style="font-weight:400;font-size:10px;color:#6b7280">(미니 PC LAN)</span></span>
+      <button onclick="closeServerPanel()" style="margin-left:auto;width:30px;height:30px;border:none;border-bottom:2px solid #121212;background:#fff;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div style="padding:18px;overflow-y:auto;display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:320px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span id="srvState" style="font-size:11px;font-weight:800;padding:4px 10px;background:#e5e7eb;color:#374151">···</span>
+        <span id="srvProgress" style="font-size:11px;color:#6b7280"></span>
+        <button onclick="serverRun('youtube')" style="margin-left:auto;padding:8px 12px;font-size:12px;font-weight:800;border:2px solid #121212;background:#121212;color:#fff;cursor:pointer">📺 YouTube</button>
+        <button onclick="serverRun('github')" style="padding:8px 12px;font-size:12px;font-weight:800;border:2px solid #121212;background:#fff;cursor:pointer">🐙 GitHub</button>
+        <button onclick="serverCancel()" style="padding:8px 12px;font-size:12px;font-weight:800;border:2px solid #dc2626;background:#fff;color:#dc2626;cursor:pointer">■ 중단</button>
+      </div>
+      <div style="height:8px;background:#e5e7eb;border:1px solid #d1d5db;margin-bottom:4px"><div id="srvBar" style="height:100%;width:0%;background:#0284c7;transition:width .3s"></div></div>
+      <div id="srvCurrentItem" style="font-size:11px;color:#6b7280;margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      <div id="srvLog" style="font-family:Consolas,monospace;font-size:11px;background:#111;color:#d1d5db;padding:10px;max-height:160px;overflow-y:auto;white-space:pre-wrap;margin-bottom:16px"></div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px;border:2px solid #121212">
+        <span style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase">Google</span>
+        <button onclick="googleConnect()" style="padding:8px 14px;font-size:12px;font-weight:800;border:2px solid #121212;background:#fff;cursor:pointer">🔗 Google 로그인</button>
+        <button onclick="srvSyncSubs()" style="padding:8px 12px;font-size:12px;font-weight:800;border:2px solid #121212;background:#fff;cursor:pointer">🔄 구독 동기화</button>
+        <span id="srvGoogleEmail" style="font-size:11px;color:#6b7280"></span>
+      </div>
+
+      <div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;margin-bottom:8px">AI 제공자 (요약 엔진)</div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <select id="srvAiProvider" onchange="srvAiProviderChanged()" style="flex:1;padding:8px;font-size:12px;border:2px solid #121212;background:#fff;font-family:inherit">
+          <option value="deepseek">DeepSeek</option><option value="openai">OpenAI</option><option value="openai_flex">OpenAI Flex (배치급 요금)</option>
+          <option value="glm">GLM</option><option value="glm_flex">GLM Flex (배치급 요금)</option>
+          <option value="gemini">Gemini</option><option value="openrouter">OpenRouter</option><option value="openrouter_flex">OpenRouter Flex (배치급 요금)</option>
+          <option value="lmstudio">LM Studio (로컬)</option>
+          <option value="anthropic">Anthropic (Claude)</option><option value="grok">Grok (xAI)</option>
+        </select>
+        <input id="srvAiModel" type="text" placeholder="모델명" style="flex:1;padding:8px;font-size:12px;border:2px solid #121212;font-family:inherit" />
+      </div>
+      <div id="srvAiKeyWrap" style="margin-bottom:6px">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">API 키 <span id="srvAiKeyHint" style="color:#9ca3af"></span></div>
+        <input id="srvAiKey" type="password" placeholder="새 키 입력 (비우면 기존 키 유지)" autocomplete="off" style="width:100%;padding:8px;font-size:12px;border:2px solid #121212;box-sizing:border-box" />
+      </div>
+      <div id="srvAiUrlWrap" style="margin-bottom:6px;display:none">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">LM Studio URL</div>
+        <input id="srvAiUrl" type="text" placeholder="http://127.0.0.1:1234/v1" style="width:100%;padding:8px;font-size:12px;border:2px solid #121212;box-sizing:border-box" />
+      </div>
+      <div id="srvAiStatus" style="font-size:11px;color:#6b7280;margin-bottom:12px"></div>
+
+      <div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;margin-bottom:8px">텔레그램 알림</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;margin-bottom:10px">
+        <input type="checkbox" id="srvTgEnabled" /> 작업 완료/오류 시 알림 보내기
+      </label>
+      <div style="margin-bottom:6px">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">봇 토큰 (BotFather에서 발급)</div>
+        <input id="srvTgToken" type="text" placeholder="123456789:ABC..." style="width:100%;padding:8px;font-size:12px;border:2px solid #121212;box-sizing:border-box" />
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">대상 (채팅ID:토픽ID — 토픽 없으면 채팅ID만)</div>
+        <input id="srvTgTarget" type="text" placeholder="-1004123519287:23" style="width:100%;padding:8px;font-size:12px;border:2px solid #121212;box-sizing:border-box" />
+      </div>
+
+      <div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;margin-bottom:8px">자동 요약 설정</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;margin-bottom:10px">
+        <input type="checkbox" id="srvEnabled" /> 자동 요약 활성화
+      </label>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <select id="srvInterval" onchange="srvTimeToggle()" style="flex:1;padding:8px;font-size:12px;border:2px solid #121212;background:#fff;font-family:inherit">
+          <option value="3h">3시간마다</option><option value="6h">6시간마다</option><option value="12h">12시간마다</option>
+          <option value="24h">매일</option><option value="daily">매일 특정 시각</option>
+        </select>
+        <input id="srvTime" type="time" value="08:00" style="padding:6px;font-size:12px;border:2px solid #121212;width:90px;display:none" />
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:#6b7280;margin-bottom:4px">최대 영상 길이 (분, 0=무제한)</div>
+        <input id="srvMaxMin" type="number" value="0" style="width:100%;padding:8px;font-size:12px;border:2px solid #121212;box-sizing:border-box" />
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex:1"><input type="checkbox" id="srvIncludeGh" /> GitHub 트렌딩 포함</label>
+        <input id="srvGhDays" type="number" value="7" min="1" max="30" style="width:64px;padding:6px;font-size:12px;border:2px solid #121212" />
+        <span style="font-size:11px;color:#6b7280">일</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="serverSave()" style="flex:1;padding:10px;font-size:12px;font-weight:800;border:2px solid #121212;background:#121212;color:#fff;cursor:pointer">💾 설정 저장 (서버 적용)</button>
+        <button onclick="serverLoad()" style="padding:10px 12px;font-size:12px;font-weight:800;border:2px solid #121212;background:#fff;cursor:pointer">↻ 불러오기</button>
+      </div>
+      <div id="srvSettingsMsg" style="font-size:11px;color:#10b981;margin-top:8px"></div>
+      </div>
+      <div style="flex:1;min-width:260px;max-width:360px">
+        <div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;margin-bottom:4px">자동 요약 대상 채널</div>
+        <div style="font-size:10px;color:#9ca3af;margin-bottom:8px">선택 안 함 = 전체 채널 대상</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button onclick="srvSelAll()" style="flex:1;padding:6px 0;font-size:11px;font-weight:800;border:2px solid #121212;background:#121212;color:#fff;cursor:pointer">전체 선택</button>
+          <button onclick="srvSelNone()" style="flex:1;padding:6px 0;font-size:11px;font-weight:800;border:2px solid #121212;background:#fff;cursor:pointer">선택 해제</button>
+        </div>
+        <div id="srvChannelList" style="border:2px solid #121212;max-height:360px;overflow-y:auto;padding:6px;background:#fff"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="detail-overlay" id="overlay">
+  <div class="detail-resize" id="detailResize"></div>
+  <div class="detail" id="detailBox"></div>
+</div>
+
+<!-- ── 설정 팝업 ── -->
+<div id="settingsPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:400;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+  <div style="width:min(420px,92vw);background:#fff;border:2px solid #121212;box-shadow:6px 6px 0 rgba(0,0,0,0.25)">
+    <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:2px solid #121212">
+      <span id="stTitle" style="font-size:15px;font-weight:800;color:#121212">설정</span>
+      <button onclick="closeSettings()" style="margin-left:auto;width:30px;height:30px;border:none;border-bottom:2px solid #121212;background:#fff;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div style="padding:18px">
+      <div id="stLang" style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;margin-bottom:8px">언어</div>
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        <button onclick="setLang('ko')" id="langKo" style="flex:1;padding:8px 0;font-size:12px;font-weight:700;border:2px solid #121212;background:#fff;cursor:pointer">한국어</button>
+        <button onclick="setLang('en')" id="langEn" style="flex:1;padding:8px 0;font-size:12px;font-weight:700;border:2px solid #121212;background:#fff;cursor:pointer">English</button>
+      </div>
+      <div id="stBehavior" style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;margin-bottom:8px">동작</div>
+      <label style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#121212;cursor:pointer;padding:6px 0">
+        <input type="checkbox" id="setAutoplay" onchange="savePrefs()" style="width:16px;height:16px;accent-color:#121212"> <span id="stAutoplay">상세 열 때 자동 재생</span>
+      </label>
+      <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#121212;padding:6px 0">
+        <span id="stHero" style="font-weight:700">상세 썸네일 기본</span>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px">
+          <input type="radio" name="heroDef" id="setHeroOpen" onchange="setHeroDefault('open')" style="width:15px;height:15px;accent-color:#121212"> <span id="stHeroOpen">펼침</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px">
+          <input type="radio" name="heroDef" id="setHeroClosed" onchange="setHeroDefault('closed')" style="width:15px;height:15px;accent-color:#121212"> <span id="stHeroClosed">접힘</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// SUMMARIZER 웹 뷰어 — Cloudflare Worker 배포 (의존성 없음, 설정 불필요)
+// API: 같은 사이트의 /api/sync (Cloudflare Worker + R2)
+// ═══════════════════════════════════════════════════════════════
+const CFG_KEY = 'summ_viewer_config';
+const COLORS = { videos: '#0d9488', github_repos: '#7c3aed' };
+const SECTION_DEFS = {
+  videos: [
+    ['timeline', '타임라인', '#e11d48'], ['keywords', '키워드', '#dc2626'],
+    ['summary', '요약', '#0d9488'], ['analysis', '분석', '#7c3aed'],
+    ['insights', '인사이트 & 시사점', '#d97706'],
+  ],
+  github_repos: [
+    ['keywords', '키워드', '#dc2626'], ['summary', '요약', '#0d9488'],
+    ['analysis', '분석', '#7c3aed'], ['insights', '인사이트 & 시사점', '#d97706'],
+    ['applications', '활용', '#0284c7'],
+  ]
+};
+
+// Cloudflare Worker 배포 — 설정 불필요 (API는 같은 사이트의 /api/sync)
+let cfg = { url: '', key: '', lang: 'ko', autoplay: false, heroThumbDefault: 'open' };
+let prefsLoaded = false;
+let state = { tab: 'unread', cat: '', q: '', view: 'card', detail: null, thumbOpen: true, sel: new Set(), data: { videos: [], github_repos: [] } };
+
+// ── 플로팅바 기능 (홈 탭과 동일) ──
+function toggleView() { state.view = state.view === 'card' ? 'list' : 'card'; render(); }
+function toggleSelectAll() {
+  const rows = filtered();
+  if (state.sel.size === rows.length && rows.length > 0) state.sel.clear();
+  else { state.sel.clear(); rows.forEach(r => state.sel.add(r._t + '::' + r.id)); }
+  render();
+}
+async function deleteSelected() {
+  if (state.sel.size === 0) return;
+  if (!confirm(state.sel.size + t('confirmDelN'))) return;
+  for (const k of state.sel) {
+    const [t, id] = k.split('::');
+    try { await sb('PATCH', t, '&id=' + encodeURIComponent(id), { deleted: '1' }); } catch {}
+  }
+  state.sel.clear();
+  await loadData();
+}
+let CATS = {};
+
+function loadConfig() {
+  try { const s = localStorage.getItem(CFG_KEY); if (s) cfg = { ...cfg, ...JSON.parse(s) }; } catch {}
+  prefsLoaded = true;
+}
+function saveConfig() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+// ── 설정 팝업 ──
+function openSettings() {
+  document.getElementById('settingsPopup').style.display = 'flex';
+  // i18n 텍스트 갱신 (언어 변경 시 팝업 내용도 즉시 반영)
+  const st = (id, key) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
+  st('stTitle', 'stTitle'); st('stLang', 'stLang'); st('stBehavior', 'stBehavior');
+  st('stAutoplay', 'stAutoplay'); st('stHero', 'stHero'); st('stHeroOpen', 'stHeroOpen'); st('stHeroClosed', 'stHeroClosed');
+  document.getElementById('setHeroOpen').checked = cfg.heroThumbDefault !== 'closed';
+  document.getElementById('setHeroClosed').checked = cfg.heroThumbDefault === 'closed';
+  document.getElementById('langKo').style.background = cfg.lang === 'ko' ? '#121212' : '#fff';
+  document.getElementById('langKo').style.color = cfg.lang === 'ko' ? '#fff' : '#121212';
+  document.getElementById('langEn').style.background = cfg.lang === 'en' ? '#121212' : '#fff';
+  document.getElementById('langEn').style.color = cfg.lang === 'en' ? '#fff' : '#121212';
+  document.getElementById('setAutoplay').checked = !!cfg.autoplay;
+}
+
+function closeSettings() { document.getElementById('settingsPopup').style.display = 'none'; }
+
+// ── 서버 조작 패널 (미니 PC LAN 서버) ──
+let srvPollTimer = null;
+let lastSrvStatus = 'idle';
+let srvSettingsCache = null;
+function openServerPanel() {
+  document.getElementById('serverPopup').style.display = 'flex';
+  srvLog('서버 연결 확인 중...');
+  serverLoad();
+  serverStatus();
+  srvFetch('/api/settings').then(s => {
+    if (s.google_email) document.getElementById('srvGoogleEmail').textContent = '(' + s.google_email + ')';
+  }).catch(() => {});
+  srvPollTimer = setInterval(serverStatus, 3000);
+}
+function closeServerPanel() {
+  document.getElementById('serverPopup').style.display = 'none';
+  if (srvPollTimer) { clearInterval(srvPollTimer); srvPollTimer = null; }
+}
+function srvLog(msg) {
+  const el = document.getElementById('srvLog');
+  el.textContent += (el.textContent ? '\n' : '') + msg;
+  el.scrollTop = el.scrollHeight;
+}
+async function srvFetch(url, opts) {
+  try {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    throw new Error('서버 연결 실패 — 미니 PC 서버에서 열어야 합니다 (' + e.message + ')');
+  }
+}
+async function serverStatus() {
+  try {
+    const s = await srvFetch('/api/status');
+    const st = document.getElementById('srvState');
+    st.textContent = (s.status || 'idle').toUpperCase();
+    st.style.background = s.status === 'running' ? '#fbbf24' : (s.status === 'completed' || s.status === 'cancelled') ? '#bfdbfe' : '#d1fae5';
+    st.style.color = '#111';
+    const total = s.total || 0, cur = s.current || 0;
+    const pct = total > 0 ? Math.min(100, Math.round(cur / total * 100)) : 0;
+    document.getElementById('srvBar').style.width = pct + '%';
+    document.getElementById('srvProgress').textContent = s.status === 'running' ? cur + '/' + total + ' (' + pct + '%)' : (total > 0 ? cur + '/' + total : '');
+    const items = s.currentItems || [];
+    document.getElementById('srvCurrentItem').textContent = (s.status === 'running' && items.length) ? '▶ ' + (items[items.length - 1].title || '') : '';
+    if (s.status === 'running' && s.logs && s.logs.length) {
+      document.getElementById('srvLog').textContent = s.logs.slice(-8).join('\n');
+    }
+    if (lastSrvStatus === 'running' && s.status !== 'running') {
+      srvLog(s.status === 'cancelled' ? '■ 중단됨 (' + cur + '/' + total + ')' : '✅ 완료 (' + cur + '/' + total + ')');
+    }
+    lastSrvStatus = s.status;
+  } catch (e) { document.getElementById('srvState').textContent = '연결 불가'; document.getElementById('srvState').style.background = '#fee2e2'; }
+}
+async function serverRun(type) {
+  try {
+    lastSrvStatus = 'idle';
+    document.getElementById('srvBar').style.width = '0%';
+    if (type === 'github') {
+      srvLog('① GitHub 트렌딩 수집 중...');
+      const days = document.getElementById('srvGhDays').value || 7;
+      const f = await srvFetch('/api/github/fetch?days=' + days);
+      const repos = f.repos || [];
+      srvLog('   수집 ' + repos.length + '개 (신규)');
+      if (!repos.length) { srvLog('⚠️ 새 레포 없음'); return; }
+      srvLog('② GitHub 요약 시작 (' + repos.length + '개)...');
+      await srvFetch('/api/github/process-batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repos: repos }) });
+      srvLog('   진행 중 — 로그는 아래에 표시됩니다');
+      serverStatus();
+    } else {
+      srvLog('① 채널 수집 중...');
+      const f = await srvFetch('/api/fetch-videos?days=1');
+      const vids = f.videos || [];
+      srvLog('   수집 ' + vids.length + '개 (쇼츠 제외 ' + (f.ytDlpChecked || 0) + ' / 실패 ' + (f.ytDlpFailed || 0) + ')');
+      if (!vids.length) { srvLog('⚠️ 새 영상 없음'); return; }
+      srvLog('② 요약 시작 (' + vids.length + '개)...');
+      await srvFetch('/api/process-videos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ videos: vids }) });
+      srvLog('   진행 중 — 로그는 아래에 표시됩니다');
+      serverStatus();
+    }
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+async function serverCancel() {
+  try { await srvFetch('/api/process-cancel', { method: 'POST' }); srvLog('■ 중단 요청'); }
+  catch (e) { srvLog('❌ ' + e.message); }
+}
+async function serverLoad() {
+  try {
+    const s = await srvFetch('/api/settings');
+    srvSettingsCache = s;
+    document.getElementById('srvEnabled').checked = s.auto_summary_enabled === '1';
+    document.getElementById('srvInterval').value = s.auto_summary_interval || '6h';
+    document.getElementById('srvTime').value = s.auto_summary_time || '08:00';
+    document.getElementById('srvMaxMin').value = s.auto_summary_max_minutes || '0';
+    document.getElementById('srvIncludeGh').checked = s.auto_summary_include_github === '1';
+    document.getElementById('srvGhDays').value = s.auto_summary_github_days || '7';
+    document.getElementById('srvAiProvider').value = s.ai_provider || 'deepseek';
+    srvAiProviderChanged();
+    document.getElementById('srvTgEnabled').checked = s.telegram_enabled !== '0';
+    document.getElementById('srvTgToken').value = s.telegram_bot_token || '';
+    document.getElementById('srvTgTarget').value = s.telegram_target || '';
+    srvTimeToggle();
+    await srvRenderChannels((s.auto_summary_channels || '').split(',').filter(Boolean));
+    srvLog('설정 불러옴 (자동 요약 ' + (s.auto_summary_enabled === '1' ? 'ON' : 'OFF') + ')');
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+function srvTimeToggle() {
+  document.getElementById('srvTime').style.display = document.getElementById('srvInterval').value === 'daily' ? 'block' : 'none';
+}
+function srvAiProviderChanged() {
+  const p = document.getElementById('srvAiProvider').value;
+  const st = document.getElementById('srvAiStatus');
+  const isLocal = p === 'lmstudio';
+  // LM Studio: 키 대신 URL 입력 / 그 외: 키 입력
+  document.getElementById('srvAiKeyWrap').style.display = isLocal ? 'none' : 'block';
+  document.getElementById('srvAiUrlWrap').style.display = isLocal ? 'block' : 'none';
+  if (!srvSettingsCache) { st.textContent = ''; return; }
+  document.getElementById('srvAiModel').value = srvSettingsCache[p + '_model'] || '';
+  if (isLocal) {
+    const url = srvSettingsCache.lmstudio_url || '';
+    document.getElementById('srvAiUrl').value = url;
+    st.style.color = url ? '#10b981' : '#dc2626';
+    st.textContent = url ? '로컬 서버: ' + url : '⚠️ LM Studio URL 없음';
+  } else {
+    const has = !!(srvSettingsCache[p + '_key']);
+    document.getElementById('srvAiKey').value = '';
+    document.getElementById('srvAiKeyHint').textContent = has ? '(기존 키 등록됨 — 교체 시 입력)' : '';
+    st.style.color = has ? '#10b981' : '#dc2626';
+    st.textContent = has ? 'API 키 등록됨 ✓' : '⚠️ API 키 없음 — 요약 실패할 수 있음';
+  }
+}
+async function srvRenderChannels(selected) {
+  const list = document.getElementById('srvChannelList');
+  try {
+    const d = await srvFetch('/api/channels');
+    const chs = d.channels || [];
+    list.innerHTML = chs.map(ch => {
+      const id = ch.channelId || '';
+      const active = ch.active !== false;
+      const on = selected.includes(id);
+      return '<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 2px;cursor:pointer;border-bottom:1px solid #f3f4f6' + (active ? '' : ';opacity:.45') + '">' +
+        '<input type="checkbox" class="srvChk" value="' + escapeHtml(id) + '"' + (on ? ' checked' : '') + (active ? '' : ' disabled') + ' style="width:14px;height:14px;accent-color:#121212;flex-shrink:0">' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(ch.channelName || id) + (active ? '' : ' (해지됨)') + '</span></label>';
+    }).join('') || '<div style="font-size:11px;color:#9ca3af;padding:8px">채널 없음</div>';
+  } catch (e) {
+    list.innerHTML = '<div style="font-size:11px;color:#dc2626;padding:8px">채널 로드 실패</div>';
+  }
+}
+function srvSelAll() { document.querySelectorAll('#srvChannelList .srvChk').forEach(c => { if (!c.disabled) c.checked = true; }); }
+function srvSelNone() { document.querySelectorAll('#srvChannelList .srvChk').forEach(c => { if (!c.disabled) c.checked = false; }); }
+async function srvSyncSubs() {
+  try {
+    srvLog('① Google 구독 목록 불러오는 중...');
+    const d = await srvFetch('/api/youtube/subscriptions');
+    srvLog('   신규 ' + (d.imported || 0) + '개 / 전체 ' + (d.total || 0) + '개 — 해지된 채널은 비활성화됨');
+    await serverLoad();
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+async function googleConnect() {
+  try {
+    const origin = location.origin;  // http://<미니PC IP>:8787
+    const d = await srvFetch('/api/oauth/url?redirect=' + encodeURIComponent(origin + '/auth/callback'));
+    window.open(d.url, '_blank');
+    srvLog('Google 로그인 창이 열렸습니다 — 완료 후 자동 감지');
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries++;
+      try {
+        const s = await srvFetch('/api/settings');
+        if (s.google_access_token) {
+          clearInterval(timer);
+          document.getElementById('srvGoogleEmail').textContent = s.google_email ? '(' + s.google_email + ')' : '';
+          srvLog('✅ Google 연동 완료!');
+        } else if (tries > 60) { clearInterval(timer); srvLog('⏱️ 시간 초과 — 다시 시도하세요'); }
+      } catch { /* 재시도 */ }
+    }, 3000);
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+async function serverSave() {
+  try {
+    const body = {
+      auto_summary_enabled: document.getElementById('srvEnabled').checked ? '1' : '0',
+      auto_summary_interval: document.getElementById('srvInterval').value,
+      auto_summary_time: document.getElementById('srvTime').value || '08:00',
+      auto_summary_max_minutes: document.getElementById('srvMaxMin').value || '0',
+      auto_summary_include_github: document.getElementById('srvIncludeGh').checked ? '1' : '0',
+      auto_summary_github_days: document.getElementById('srvGhDays').value || '7',
+      auto_summary_channels: Array.from(document.querySelectorAll('#srvChannelList .srvChk')).filter(c => c.checked).map(c => c.value).join(','),
+      ai_provider: document.getElementById('srvAiProvider').value,
+      [document.getElementById('srvAiProvider').value + '_model']: document.getElementById('srvAiModel').value,
+      telegram_enabled: document.getElementById('srvTgEnabled').checked ? '1' : '0',
+      telegram_bot_token: document.getElementById('srvTgToken').value.trim(),
+      telegram_target: document.getElementById('srvTgTarget').value.trim(),
+    };
+    // API 키 — 비어있으면 기존 키 유지 (merge_settings는 누락 키를 보존), 입력 시 교체
+    const provider = document.getElementById('srvAiProvider').value;
+    const keyVal = document.getElementById('srvAiKey').value.trim();
+    if (provider === 'lmstudio') {
+      body.lmstudio_url = document.getElementById('srvAiUrl').value.trim();
+    } else if (keyVal) {
+      body[provider + '_key'] = keyVal;
+    }
+    await srvFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const m = document.getElementById('srvSettingsMsg');
+    m.textContent = '✅ 서버에 적용됨';
+    setTimeout(() => { m.textContent = ''; }, 2000);
+    srvLog('설정 저장 → 서버 적용');
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+function setLang(l) { cfg.lang = l; saveConfig(); applyLang(); openSettings(); render(); }
+function savePrefs() {
+  cfg.autoplay = document.getElementById('setAutoplay').checked;
+  saveConfig(); render();
+}
+function setHeroDefault(v) {
+  cfg.heroThumbDefault = v;
+  saveConfig();
+}
+
+// ── 간단 i18n (설정 UI + 탭 라벨) ──
+const I18N = {
+  ko: {
+    unread: '안 읽음', github: '깃허브', favorite: '즐겨찾기', all: '전체',
+    settings: '설정', markRead: '읽음 처리', read: '읽음', unread: '읽음',
+    del: '삭제', fav: '별', star: '별', catAll: '전체', catAllLabel: '전체 카테고리',
+    searchPh: '검색...', count: '건', prev: '이전', next: '다음',
+    ytOpen: '▶ YouTube 열기', ytShort: '▶ YouTube', ghOpen: 'GitHub에서 보기',
+    detailClose: '닫기', loading: '불러오는 중...', empty: '항목이 없습니다',
+    selAll: '전체 선택', selDel: '선택 항목 지우기', confirmDel: '삭제할까요? (웹 뷰어에서 숨김)',
+    confirmDelN: '개 항목을 삭제할까요? (웹 뷰어에서 숨김)',
+    stTitle: '설정', stLang: '언어', stBehavior: '동작', stAutoplay: '상세 열 때 자동 재생',
+    stHero: '상세 썸네일 기본', stHeroOpen: '펼침', stHeroClosed: '접힘',
+    hideThumb: '썸네일 접기', showThumb: '썸네일 펼치기',
+  },
+  en: {
+    unread: 'Unread', github: 'GitHub', favorite: 'Favorite', all: 'All',
+    settings: 'Settings', markRead: 'Mark read', read: 'Read', unread: 'Unread',
+    del: 'Delete', fav: 'Star', star: 'Star', catAll: 'All', catAllLabel: 'All categories',
+    searchPh: 'Search...', count: '', prev: 'Prev', next: 'Next',
+    ytOpen: '▶ Open YouTube', ytShort: '▶ YouTube', ghOpen: 'View on GitHub',
+    detailClose: 'Close', loading: 'Loading...', empty: 'No items',
+    selAll: 'Select all', selDel: 'Delete selected', confirmDel: 'Delete? (hidden in viewer)',
+    confirmDelN: ' items will be deleted? (hidden in viewer)',
+    stTitle: 'Settings', stLang: 'Language', stBehavior: 'Behavior', stAutoplay: 'Autoplay when opening detail',
+    stHero: 'Detail thumb default', stHeroOpen: 'Expanded', stHeroClosed: 'Collapsed',
+    hideThumb: 'Hide thumbnail', showThumb: 'Show thumbnail',
+  }
+};
+function t(k) { const L = I18N[cfg.lang] || I18N.ko; return L[k] !== undefined ? L[k] : (I18N.ko[k] || k); }
+// renderTabs에서 사용 (설정 탭 라벨은 직접 처리)
+function applyLang() {
+  document.documentElement.lang = cfg.lang;
+  renderTabs();
+}
+function escapeHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function isTrue(v) { return v === '1' || v === true || v === 'true'; }
+
+async function sb(method, table, path, body) {
+  // Cloudflare /api/sync 호출 — 같은 사이트의 Worker
+  let url = '/api/sync?table=' + table + (path || '');
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()).slice(0, 120));
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+async function loadData() {
+  const [v, g] = await Promise.all([
+    sb('GET', 'videos', ''),
+    sb('GET', 'github_repos', ''),
+  ]);
+  state.data.videos = v || []; state.data.github_repos = g || [];
+  CATS = {};
+  [...state.data.videos, ...state.data.github_repos].forEach(r => { if (r.category) CATS[r.category] = 1; });
+  renderCats();
+  render();
+}
+
+// ── 상세 패널 리사이즈 + 배경 좌측 밀림 (홈 탭 기능) ──
+let panelW = 720;
+const MIN_W = 360, MAX_W = 1200;
+
+function applyPanelLayout() {
+  const ov = document.getElementById('overlay');
+  const isMobile = window.innerWidth <= 768;
+  ov.style.width = isMobile ? '100vw' : panelW + 'px';
+  // 데스크톱에서만 배경 좌측 밀기 (패널 폭 + border 만큼)
+  const tb = document.getElementById('topbar');
+  if (isMobile) {
+    document.body.style.marginRight = '0';
+    if (tb) tb.style.marginRight = '0';
+  } else {
+    const mr = (panelW + 2) + 'px';
+    document.body.style.marginRight = mr;
+    // 탭바는 밀림에서 제외 (반대 marginRight 보정 → 전체 폭 유지)
+    if (tb) tb.style.marginRight = '-' + mr;
+  }
+}
+
+function initResize() {
+  const handle = document.getElementById('detailResize');
+  if (!handle) return;
+  handle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelW;
+    const onMove = ev => {
+      panelW = Math.max(MIN_W, Math.min(MAX_W, startW - (ev.clientX - startX)));
+      applyPanelLayout();
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+// ── 선택 토글 ──
+function toggleSel(t, id) {
+  const k = t + '::' + id;
+  if (state.sel.has(k)) state.sel.delete(k); else state.sel.add(k);
+  render();
+}
+
+// ── 타임라인 시크: 타임스탬프 클릭 → YouTube 해당 시점 재생 ──
+// 초 → mm:ss / h:mm:ss 포맷
+function fmtDuration(sec) {
+  const n = parseInt(sec) || 0;
+  const h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), s = n % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+}
+function tsToSec(ts) {
+  const p = String(ts).split(':').map(Number);
+  if (p.length === 3) return p[0]*3600 + p[1]*60 + p[2];
+  if (p.length === 2) return p[0]*60 + p[1];
+  return p[0] || 0;
+}
+function seekTo(ts) {
+  const secs = tsToSec(ts);
+  const ifr = document.querySelector('.detail-overlay iframe');
+  if (!ifr || !state.detail) return;
+  ifr.src = `https://www.youtube.com/embed/${encodeURIComponent(state.detail.id)}?start=${secs}&autoplay=1&rel=0`;
+}
+
+// ── 상태 변경 (읽음/즐겨찾기/삭제 → PATCH) ──
+// base64로 ID 전달 — 데이터에 특수문자가 있어도 onclick 안전
+function b64enc(s) { try { return btoa(unescape(encodeURIComponent(s))); } catch { return ''; } }
+function b64dec(s) { try { return decodeURIComponent(escape(atob(s))); } catch { return s; } }
+
+async function setStateById(tbl, idB64, field, val) {
+  const id = b64dec(idB64);
+  const table = (tbl === 'github_repos' || tbl === 'github') ? 'github_repos' : 'videos';
+  const rec = (state.data[table] || []).find(r => r.id === id);
+  if (!rec) return;
+  const upd = { [field]: val, updated_at: new Date().toISOString().replace(/\.\d+Z$/, 'Z') };
+  await sb('PATCH', table, '&id=' + encodeURIComponent(id), upd);
+  rec[field] = val; rec.updated_at = upd.updated_at;
+  if (state.detail && state.detail.id === id) state.detail[field] = val;
+  // 읽음 처리 + 상세 열림 → 다음 카드로 자동 이동 (마지막이면 닫기)
+  if (field === 'read' && val === '1' && state.detail && state.detail.id === id) {
+    // Unread 탭 필터 때문에 갱신된 read가 목록에서 현재 항목을 빼버림
+    // → 잠시 미읽음으로 복원해 목록에 포함시킨 뒤 다음 항목 탐색
+    rec.read = '0';
+    const rows = filtered();
+    rec.read = '1';
+    const idx = rows.findIndex(r => r.id === id);
+    const next = idx >= 0 ? rows[idx + 1] : null;
+    if (next) { openDetail(next._t, next.id); render(); return; }
+    else { closeDetail(); render(); return; }
+  }
+  render();
+}
+async function setDeletedById(tbl, idB64) {
+  if (!confirm(t('confirmDel'))) return;
+  await setStateById(tbl, idB64, 'deleted', '1');
+}
+
+// ── 렌더링 ──
+function filtered() {
+  // ALL 탭: videos + github_repos 모두 표시 (읽음 무관 — 전체 보기)
+  const all = state.tab === 'all'
+    ? [...state.data.videos, ...state.data.github_repos]
+    : (state.tab === 'github' ? state.data.github_repos : state.data.videos);
+  let rows = all.filter(r => !isTrue(r.deleted));
+  // unread/github 탭: 읽은 항목 숨김 (읽음 처리하면 ALL 탭에서만 보임 — Windows 앱과 동일 동작)
+  if (state.tab === 'unread' || state.tab === 'github') rows = rows.filter(r => !isTrue(r.read));
+  if (state.tab === 'favorite') rows = rows.filter(r => isTrue(r.favorite));
+  if (state.cat) rows = rows.filter(r => r.category === state.cat);
+  if (state.q) {
+    const q = state.q.toLowerCase();
+    rows = rows.filter(r => (r.title||'').toLowerCase().includes(q) || (r.channel_name||'').toLowerCase().includes(q) || (r.keywords||'').toLowerCase().includes(q));
+  }
+  return rows;
+}
+
+const TAB_ICONS = {
+  unread: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
+  github: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>',
+  favorite: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  all: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  server: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+};
+function renderTabs() {
+  // 탭 이름은 언어와 무관하게 항상 영문 고정 (UNREAD/GITHUB/FAVORITE/ALL)
+  const tabs = [['unread', 'UNREAD'],['github', 'GITHUB'],['favorite', 'FAVORITE'],['all', 'ALL']];
+  document.getElementById('tabs').innerHTML = tabs.map(([k,l]) =>
+    `<button class="tab ${state.tab===k?'active':''}" onclick="state.tab='${k}';state.cat='';render()">${TAB_ICONS[k]}<span>${l}</span></button>`).join('')
+    + `<button class="tab" onclick="openSettings()" title="설정">${TAB_ICONS.settings}<span>${cfg.lang === 'ko' ? '설정' : 'Settings'}</span></button>`
+    + `<button class="tab" onclick="openServerPanel()" title="서버 조작">${TAB_ICONS.server}<span>${cfg.lang === 'ko' ? '서버' : 'Server'}</span></button>`;
+}
+
+// 카테고리 명칭 통일 — 로컬 앱 CAT_KR 매핑 재사용 (커스텀 값은 그대로)
+const CAT_KR = { 'Technology':'테크', 'Science':'과학', 'News/Politics':'뉴스/정치', 'Entertainment':'엔터테인먼트', 'Education':'교육', 'Business/Finance':'비즈니스/금융', 'Gaming':'게임', 'Music':'음악', 'Lifestyle':'라이프스타일', 'Sports':'스포츠' };
+// 한글/비표준 카테고리 → 표준 영문 키로 정규화 (표시 통일)
+const CAT_NORM = {
+  'AI/테크': 'Technology', 'IT/기술': 'Technology', '테크': 'Technology',
+  '경제/금융': 'Business/Finance', '금융': 'Business/Finance', '비즈니스': 'Business/Finance', '경제': 'Business/Finance',
+  '교육': 'Education',
+  '정치/국제': 'News/Politics', '정치': 'News/Politics', '뉴스': 'News/Politics',
+  '과학': 'Science', '엔터테인먼트': 'Entertainment', '게임': 'Gaming',
+  '음악': 'Music', '라이프스타일': 'Lifestyle', '스포츠': 'Sports',
+};
+function catLabel(c) {
+  if (!c) return '';
+  const norm = CAT_NORM[c] || c;            // 한글/커스텀 → 표준 키
+  if (cfg.lang === 'ko') return CAT_KR[norm] || norm;
+  return norm;
+}
+
+function renderCats() {
+  const sel = document.getElementById('catFilter');
+  sel.innerHTML = `<option value="">${t('catAll')}</option>` + Object.keys(CATS).sort().map(c => `<option value="${escapeHtml(c)}" ${state.cat===c?'selected':''}>${escapeHtml(catLabel(c))}</option>`).join('');
+}
+
+function cardActions(r) {
+  const tbl = r._t || (r.channel_name && r.channel_name.includes('/') ? 'github_repos' : 'videos');
+  const idB64 = b64enc(r.id);
+  return `<div class="act" style="display:flex;border-top:2px solid #121212">
+    <button class="read ${isTrue(r.read)?'on':''}" onclick="event.stopPropagation();setStateById('${tbl}','${idB64}','read','${isTrue(r.read)?'0':'1'}')">${isTrue(r.read)?'✓ '+t('read'):t('markRead')}</button>
+    <button class="fav ${isTrue(r.favorite)?'on':''}" onclick="event.stopPropagation();setStateById('${tbl}','${idB64}','favorite','${isTrue(r.favorite)?'0':'1'}')">${isTrue(r.favorite)?'★':'☆'}</button>
+    <button class="del" onclick="event.stopPropagation();setDeletedById('${tbl}','${idB64}')">${t('del')}</button>
+  </div>`;
+}
+
+function render() {
+  renderTabs();
+  const fsearch = document.getElementById('fsearch');
+  if (fsearch) fsearch.placeholder = t('searchPh');
+  document.getElementById('toolbar').style.display = 'flex';
+  const rows = filtered();
+  document.getElementById('count').textContent = rows.length + t('count');
+  const cont = document.getElementById('content');
+  // 플로팅바 갱신
+  const fv = document.getElementById('fview');
+  if (fv) fv.innerHTML = state.view === 'card'
+    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
+    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>';
+  document.getElementById('fsel').textContent = (state.sel.size === rows.length && rows.length > 0) ? '☑' : '☐';
+  document.getElementById('fcount').textContent = state.sel.size ? state.sel.size + '/' + rows.length : rows.length + '건';
+  // 선택된 행 하이라이트
+  const selIds = state.sel;
+
+  const isGhTab = state.tab === 'github';
+  // _t 없는 레코드(웹에서 직접 만든 것) 대비 — 탭 기준으로 테이블 확정
+  const curTable = isGhTab ? 'github_repos' : 'videos';
+  rows.forEach(r => { if (!r._t) r._t = curTable; });
+  // 레코드별 isGh — ALL 탭에서 YouTube/GitHub 혼합 렌더링 지원
+  const isGh = (r) => r._t === 'github_repos' || (r.channel_name && r.channel_name.includes('/') && !r.video_url);
+  if (state.view === 'card') {
+    cont.innerHTML = `<div class="card-grid">${rows.map(r => {
+      const thumb = (r.image_url || r.avatar || (!isGh(r) ? `https://i.ytimg.com/vi/${(r.video_url||r.id||'').match(/[\w-]{11}/)?.[0]||r.id}/hqdefault.jpg` : ''));
+      const kws = (r.keywords||'').split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean).slice(0,5);
+      const chan = (r.channel_name||'').split('/')[0] || (isGh(r) ? (r.channel_name||'').split('/')[1] : '');
+      const selKey = r._t + '::' + r.id;
+      const isSel = selIds.has(selKey);
+      return `<div class="card ${isSel?'selected':''}" onclick="openDetail('${r._t}','${escapeHtml(r.id)}')">
+        <div class="selbox ${isSel?'on':''}" onclick="event.stopPropagation();toggleSel('${r._t}','${escapeHtml(r.id)}')">${isSel?'✓':''}</div>
+        <div class="thumb-wrap">
+          ${thumb ? `<img class="thumb" src="${escapeHtml(thumb)}" onerror="this.style.display='none'">` : ''}
+          ${!isGh(r) && r.duration>0 ? `<span class="dur">${fmtDuration(r.duration)}</span>` : ''}
+        </div>
+        <div class="body">
+          <div class="title">${escapeHtml(r.title || r.id)}</div>
+          <div class="meta">
+            <span class="chan">${escapeHtml(chan)}</span>
+            <span>${r.publish_date ? escapeHtml((r.publish_date||'').slice(0,10)) : (isGh(r) ? '⭐'+(r.stars||0) : '')}</span>
+          </div>
+        </div>
+        ${kws.length?`<div class="kws">${kws.map(k=>`<span class="kw">#${escapeHtml(k)}</span>`).join('')}</div>`:''}
+        ${cardActions(r)}
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    cont.innerHTML = rows.map(r => {
+      const thumb = (r.image_url || r.avatar || (!isGh(r) ? `https://i.ytimg.com/vi/${(r.video_url||r.id||'').match(/[\w-]{11}/)?.[0]||r.id}/hqdefault.jpg` : ''));
+      const chan = (r.channel_name||'').split('/')[0] || (isGh(r) ? (r.channel_name||'').split('/')[1] : '');
+      const kws = (r.keywords||'').split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean).slice(0,3);
+      const selKey = r._t + '::' + r.id;
+      const isSel = selIds.has(selKey);
+      return `<div class="list-row ${isSel?'selected':''}" onclick="openDetail('${r._t}','${escapeHtml(r.id)}')">
+        <div class="selbox ${isSel?'on':''}" onclick="event.stopPropagation();toggleSel('${r._t}','${escapeHtml(r.id)}')">${isSel?'✓':''}</div>
+        ${thumb ? `<img class="thumb" src="${escapeHtml(thumb)}" onerror="this.style.display='none'">` : ''}
+        <div class="info">
+          <div class="title">${escapeHtml(r.title || r.id)}</div>
+          <div class="sub">
+            <span class="chan">${escapeHtml(chan)}</span>
+            ${isGh(r) ? `<span>⭐${r.stars||0} · ⑂${r.forks||0}</span>` : ''}
+            <span style="overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.description||'')}</span>
+            ${kws.length?`<span class="kw">${kws.map(k=>'#'+escapeHtml(k)).join(' ')}</span>`:''}
+          </div>
+        </div>
+        <div class="date">${!isGh(r) ? escapeHtml((r.publish_date||'').slice(0,10)) : ''}</div>
+        <div class="act">
+          <button class="read ${isTrue(r.read)?'on':''}" title="${t('read')}" onclick="event.stopPropagation();setStateById('${r._t}','${b64enc(r.id)}','read','${isTrue(r.read)?'0':'1'}')">${isTrue(r.read)?'✓':'○'}</button>
+          <button class="fav ${isTrue(r.favorite)?'on':''}" title="${t('fav')}" onclick="event.stopPropagation();setStateById('${r._t}','${b64enc(r.id)}','favorite','${isTrue(r.favorite)?'0':'1'}')">★</button>
+          <button class="del" title="${t('del')}" onclick="event.stopPropagation();setDeletedById('${r._t}','${b64enc(r.id)}')">✕</button>
+        </div>
+      </div>`;
+    }).join('') || '<div class="empty">표시할 항목이 없습니다</div>';
+  }
+}
+
+// ── 썸네일 접기/펼치기 (iframe 유지 + CSS만 토글 — 광고 재요청 방지) ──
+function toggleThumb() {
+  state.thumbOpen = !state.thumbOpen;
+  const tw = document.getElementById('thumbWrap');
+  if (tw) tw.style.display = state.thumbOpen ? '' : 'none';
+  const btn = document.getElementById('thumbToggle');
+  if (btn) btn.textContent = (state.thumbOpen ? '▲ ' : '▼ ') + (state.thumbOpen ? t('hideThumb') : t('showThumb'));
+}
+
+function openDetail(tbl, id) {
+  const table = state.data[tbl] ? tbl : (tbl === 'github_repos' || tbl === 'github' ? 'github_repos' : 'videos');
+  const rec = (state.data[table] || []).find(r => r.id === id);
+  if (!rec) return;
+  state.detail = rec;
+  state.thumbOpen = cfg.heroThumbDefault !== 'closed';  // 기본 상태 (펼침/접힘)
+  const isGh = table === 'github_repos';
+  const defs = SECTION_DEFS[table] || [];
+
+  // ── 섹션 렌더링 (홈 탭: 4px 컬러바 + 대문자 헤더 + 상세 body) ──
+  const secs = defs.map(([key, label, color]) => {
+    let content = rec[key] || '';
+    if (!content) return '';
+    if (key === 'insights') {
+      const imp = rec.implications || '';
+      if (imp && imp.trim() && !content) content = imp;
+      else if (content && imp && imp.trim()) content = content + '<br><br>' + imp;
+    }
+    // keywords — 컬러 테두리 둥근 캡슐 (홈 탭)
+    if (key === 'keywords') {
+      const kws = content.split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean);
+      if (!kws.length) return '';
+      return `<div class="sec" style="border-bottom:2px solid #121212;background:#fff">
+        <div class="sec-h" style="display:flex;align-items:center;padding:12px 16px;background:#f6f6f8">
+          <span style="width:4px;height:16px;background:${color};margin-right:10px;flex-shrink:0"></span>
+          <span style="font-weight:800;font-size:14px;text-transform:uppercase;color:#121212">${label}</span>
+        </div>
+        <div style="padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px">
+          ${kws.map(k=>`<span style="font-size:12px;font-weight:700;color:${color};background:rgba(255,255,255,0.7);padding:5px 14px;border-radius:999px;border:2px solid ${color};box-shadow:2px 2px 0 rgba(18,18,18,0.15)">#${escapeHtml(k)}</span>`).join('')}
+        </div>
+      </div>`;
+    }
+    // timeline — 둥근 타임스탬프 칩 + 설명 (홈 탭)
+    if (key === 'timeline') {
+      const norm = content.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');  // HTML 태그 전부 제거
+      const parts = norm.split(/\n|•|\*|-/).map(s => s.trim()).filter(Boolean);
+      const items = [];
+      const tsToSec = (t) => { const p = t.split(':').map(Number); return p.length === 3 ? p[0]*3600+p[1]*60+p[2] : p[0]*60+p[1]; };
+      const fmtT = (t) => { const s = tsToSec(t); const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60; const mm = String(m).padStart(2,'0'), sss = String(ss).padStart(2,'0'); return h > 0 ? `${h}:${mm}:${sss}` : `${mm}:${sss}`; };
+      const re = /\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?\s*(.+)/;
+      for (const part of parts) {
+        const m = part.match(re);
+        if (m) items.push({ t: fmtT(m[1]), d: m[2] });
+      }
+      if (!items.length) return '';
+      return `<div class="sec" style="border-bottom:2px solid #121212;background:#fff;--sec-color:${color}">
+        <div class="sec-h" style="display:flex;align-items:center;padding:12px 16px;background:#f6f6f8">
+          <span style="width:4px;height:16px;background:${color};margin-right:10px;flex-shrink:0"></span>
+          <span style="font-weight:800;font-size:14px;text-transform:uppercase;color:#121212">${label}</span>
+        </div>
+        <div class="tl-box" style="padding:12px 16px;max-height:260px;overflow-y:auto">
+          ${items.map(i=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:5px 0;font-size:13px;line-height:1.6;border-bottom:1px solid rgba(18,18,18,0.08)">
+            <span class="tl-seek" onclick="seekTo('${escapeHtml(i.t)}')" title="이 시점으로 이동" style="background:${color};color:#fff;padding:3px 12px;font-size:11px;font-weight:700;font-family:monospace;flex-shrink:0;border-radius:999px;display:inline-flex;align-items:center;cursor:pointer;transition:0.15s" onmouseenter="this.style.opacity='0.8'" onmouseleave="this.style.opacity='1'">${escapeHtml(i.t)}</span>
+            <span style="color:#333;font-weight:500;padding-top:2px">${escapeHtml(i.d)}</span>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }
+    // 일반 섹션 — detail-body (h3 브루탈리스트/테이블/코드 CSS 적용)
+    return `<div class="sec" style="border-bottom:2px solid #121212;background:#fff;--sec-color:${color}">
+      <div class="sec-h" style="display:flex;align-items:center;padding:12px 16px;background:#f6f6f8">
+        <span style="width:4px;height:16px;background:${color};margin-right:10px;flex-shrink:0"></span>
+        <span style="font-weight:800;font-size:14px;text-transform:uppercase;color:#121212">${label}</span>
+      </div>
+      <div class="detail-body" style="padding:20px;font-size:15px;line-height:1.6;color:#333;word-break:keep-all">${content}</div>
+    </div>`;
+  }).join('');
+
+  // ── 히어로 + 액션바 (홈 탭) ──
+  const hero = !isGh ? `
+    <div style="border-bottom:2px solid #121212;background:#000">
+      <div id="thumbWrap" style="${state.thumbOpen ? '' : 'display:none;'}position:relative;width:100%;aspect-ratio:16/9">
+        <iframe src="https://www.youtube.com/embed/${escapeHtml(rec.id)}?rel=0${cfg.autoplay ? '&autoplay=1' : ''}" title="${escapeHtml(rec.title||'')}" allow="autoplay; encrypted-media" allowfullscreen style="width:100%;height:100%;border:none;display:block"></iframe>
+      </div>
+
+      <div class="hero-actions" style="display:flex;height:50px;background:#fff">
+        <button class="dact gh" onclick="window.open('https://www.youtube.com/watch?v=${escapeHtml(rec.id)}','_blank')" style="flex:2;border:none;background:#dc2626;color:#fff;cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;border-right:2px solid #121212">${t('ytOpen')}</button>
+        <button class="dact read" onclick="setStateById('${table}','${b64enc(rec.id)}','read','${isTrue(rec.read)?'0':'1'}')" style="flex:1.5;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;border-right:2px solid #121212;color:#121212">${isTrue(rec.read)?'✓ '+t('read'):t('markRead')}</button>
+        <button class="dact fav" onclick="setStateById('${table}','${b64enc(rec.id)}','favorite','${isTrue(rec.favorite)?'0':'1'}')" style="width:48px;border:none;border-left:2px solid #121212;background:${isTrue(rec.favorite)?'#f59e0b':'transparent'};cursor:pointer;font-size:18px;color:${isTrue(rec.favorite)?'#fff':'#6b7280'}">${isTrue(rec.favorite)?'★':'☆'}</button>
+      </div>
+    </div>` : `
+    <div style="border-bottom:2px solid #121212;position:relative">
+      <div id="thumbWrap" style="${state.thumbOpen ? '' : 'display:none;'}position:relative;width:100%;aspect-ratio:16/9;background:#f0f0f0">
+        <img src="${escapeHtml(rec.image_url || rec.avatar || ((rec.channel_name||'').includes('/') ? 'https://opengraph.githubassets.com/1/'+(rec.channel_name||'') : '') || 'https://github.com/'+(rec.channel_name||'').split('/')[0]+'.png?size=600')}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(0,0,0,0.78) 100%)"></div>
+        <div style="position:absolute;bottom:12px;left:16px;right:16px;display:flex;align-items:center;gap:10px">
+          <img src="${escapeHtml(rec.image_url || rec.avatar || 'https://github.com/'+(rec.channel_name||'').split('/')[0]+'.png?size=96')}" alt="" style="width:40px;height:40px;border-radius:50%;border:2px solid #fff;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">
+          <div style="min-width:0">
+            <div style="font-size:17px;font-weight:800;color:#fff;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml((rec.channel_name||'').split('/')[1] || rec.channel_name || rec.title)}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.8);font-weight:600">${escapeHtml((rec.channel_name||'').split('/')[0] || rec.owner || '')} ${rec.language?`· ${escapeHtml(rec.language)}`:''} · ⭐${rec.stars||0} · ⑂${rec.forks||0}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions" style="display:flex;height:50px;background:#fff">
+        <button class="dact gh" onclick="window.open('https://github.com/${escapeHtml(rec.channel_name||'')}','_blank')" style="flex:2;border:none;background:#121212;color:#fff;cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;border-right:2px solid #121212">${t('ghOpen')}</button>
+        <button class="dact read" onclick="setStateById('${table}','${b64enc(rec.id)}','read','${isTrue(rec.read)?'0':'1'}')" style="flex:1.5;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;border-right:2px solid #121212;color:#121212">${isTrue(rec.read)?'✓ '+t('read'):t('markRead')}</button>
+        <button class="dact fav" onclick="setStateById('${table}','${b64enc(rec.id)}','favorite','${isTrue(rec.favorite)?'0':'1'}')" style="width:50px;border:none;background:${isTrue(rec.favorite)?'#f59e0b':'transparent'};cursor:pointer;font-size:18px;color:${isTrue(rec.favorite)?'#fff':'#6b7280'}">${isTrue(rec.favorite)?'★':'☆'}</button>
+      </div>
+    </div>`;
+
+  // ── 좌우 네비게이션: 현재 탭의 filtered 목록 기준 인덱스 ──
+  const navRows = filtered();
+  const curIdx = navRows.findIndex(r => r.id === rec.id);
+  const prevRec = curIdx > 0 ? navRows[curIdx - 1] : null;
+  const nextRec = curIdx >= 0 && curIdx < navRows.length - 1 ? navRows[curIdx + 1] : null;
+  const navBar = `
+    <div style="display:flex;border-bottom:2px solid #121212;background:#f6f6f8">
+      ${prevRec ? `<button onclick="openDetail('${prevRec._t}','${escapeHtml(prevRec.id)}')" style="flex:1;padding:10px 0;font-size:12px;font-weight:700;border:none;background:transparent;cursor:pointer;border-right:2px solid #121212">‹ ${t('prev')}</button>` : `<span style="flex:1"></span>`}
+      ${nextRec ? `<button onclick="openDetail('${nextRec._t}','${escapeHtml(nextRec.id)}')" style="flex:1;padding:10px 0;font-size:12px;font-weight:700;border:none;background:transparent;cursor:pointer">${t('next')} ›</button>` : `<span style="flex:1"></span>`}
+    </div>`;
+
+  // ── 전체 패널 (홈 탭: 스티키 헤더 + 스크롤 본문) ──
+  document.getElementById('detailBox').innerHTML = `
+    <div style="position:sticky;top:0;z-index:100;background:#fff;border-bottom:2px solid #121212">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:20px 24px">
+        <div style="flex:1;min-width:0">
+          <div class="dtitle-c" style="font-size:20px;font-weight:800;line-height:1.3;color:#121212;word-break:keep-all">${escapeHtml(rec.title || rec.channel_name)}</div>
+          <div class="dmeta-c" style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-top:4px">${escapeHtml(isGh ? (rec.owner||rec.channel_name) : (rec.channel_name||''))} · ${rec.publish_date ? escapeHtml((rec.publish_date||'').slice(0,10)) : ''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:12px;flex-shrink:0">
+          <button onclick="closeDetail()" style="width:40px;height:40px;border:none;border-bottom:2px solid #121212;background:#fff;cursor:pointer;font-size:18px">✕</button>
+          <button id="thumbToggle" onclick="toggleThumb()" style="padding:5px 10px;font-size:11px;font-weight:800;border:2px solid #121212;background:#fff;color:#121212;cursor:pointer;box-shadow:2px 2px 0 rgba(0,0,0,0.2);white-space:nowrap">${state.thumbOpen ? '▲ '+t('hideThumb') : '▼ '+t('showThumb')}</button>
+        </div>
+      </div>
+    </div>
+    ${navBar}
+    ${hero}
+    ${secs}`;
+  document.getElementById('overlay').classList.add('open');
+  // 뒤로가기 지원: 상세 열 때 history 엔트리 push
+  // (토글 재렌더링(__reDetail) 시엔 push 생략 — 스택 중복 방지)
+  if (!state.__reDetail) {
+    history.pushState({ __summDetail: true }, '');
+  }
+  state.__reDetail = false;
+  applyPanelLayout();
+  // 상세가 열려 있는 동안 플로팅바 숨김 (데스크톱/모바일 공통)
+  document.getElementById('floatbar').style.display = 'none';
+  if (window.innerWidth > 768 && !document.getElementById('overlay').__layoutBound) {
+    document.getElementById('overlay').__layoutBound = true;
+  }
+  // 모바일: 하단 액션바 (좌우 이동 + YouTube + 읽음 + 나중에 볼 + 별)
+  renderMobileActions(rec, table, prevRec, nextRec, navRows, curIdx);
+  // 모바일: 상세 열면 상단으로 스크롤
+  const db = document.getElementById('detailBox');
+  if (db) db.scrollTop = 0;
+}
+
+function closeDetail() {
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.marginRight = '0';
+  const tb = document.getElementById('topbar');
+  if (tb) tb.style.marginRight = '0';
+  document.getElementById('floatbar').style.display = '';
+  const ma = document.getElementById('mActions');
+  if (ma) ma.remove();
+  state.detail = null;
+  // 상세에서 상태 변경(읽음/별/삭제) 후 닫으면 목록 즉시 갱신
+  render();
+  // history 스택에 상세용 엔트리가 있으면 pop (뒤로가기 일관성)
+  if (history.state && history.state.__summDetail) {
+    history.back();
+  }
+}
+
+// ── 뒤로가기: 상세 열 때 pushState → 브라우저 뒤로가기로 상세 닫기 ──
+function initBackNav() {
+  window.addEventListener('popstate', () => {
+    // 상세가 열려 있고 history.state에 상세 표시가 없으면 → 닫기
+    const open = document.getElementById('overlay').classList.contains('open');
+    if (open && !(history.state && history.state.__summDetail)) {
+      document.getElementById('overlay').classList.remove('open');
+      document.body.style.marginRight = '0';
+      const tb = document.getElementById('topbar');
+      if (tb) tb.style.marginRight = '0';
+      document.getElementById('floatbar').style.display = '';
+      const ma = document.getElementById('mActions');
+      if (ma) ma.remove();
+      state.detail = null;
+    }
+  });
+}
+
+// ── 모바일 하단 액션바 (상세에서만) ──
+function renderMobileActions(rec, table, prevRec, nextRec, navRows, curIdx) {
+  const isMobile = window.innerWidth <= 768;
+  if (!isMobile) return;
+  let el = document.getElementById('mActions');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'mActions';
+    el.className = 'm-actions';
+    el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;height:52px;z-index:300;display:flex;border-top:2px solid #121212;background:#fff';
+    document.body.appendChild(el);
+  }
+  const isGh = table === 'github_repos';
+  const idB = b64enc(rec.id);
+  const navPrev = prevRec ? `<button class="nav-prev" onclick="openDetail('${prevRec._t}','${escapeHtml(prevRec.id)}')">‹</button>` : '';
+  const navNext = nextRec ? `<button class="nav-next" onclick="openDetail('${nextRec._t}','${escapeHtml(nextRec.id)}')">›</button>` : '';
+  const ytBtn = !isGh ? `<button class="yt" onclick="window.open('https://www.youtube.com/watch?v=${escapeHtml(rec.id)}','_blank')">${t('ytShort')}</button>` : '';
+  el.innerHTML = navPrev + ytBtn +
+    `<button class="read ${isTrue(rec.read)?'on':''}" onclick="setStateById('${table}','${idB}','read','${isTrue(rec.read)?'0':'1'}')">${isTrue(rec.read)?'✓ '+t('read'):t('read')}</button>` +
+    `<button class="fav ${isTrue(rec.favorite)?'on':''}" onclick="setStateById('${table}','${idB}','favorite','${isTrue(rec.favorite)?'0':'1'}')">${isTrue(rec.favorite)?'★ '+t('star'):'☆ '+t('star')}</button>` +
+    navNext;
+}
+
+let setupErr = '';
+function showSetup(err) {
+  document.getElementById('toolbar').style.display = 'none';
+  setupErr = String(err || '');
+  const isOffline = !navigator.onLine;
+  const isRedirect = setupErr.includes('HTTP 302') || setupErr.includes('redirect');
+  const detail = isOffline
+    ? (cfg.lang === 'ko' ? '인터넷 연결을 확인해주세요.' : 'Check your internet connection.')
+    : (isRedirect
+      ? (cfg.lang === 'ko' ? '이 주소는 로그인 리다이렉트가 걸려 있습니다. 배포한 정식 주소(workers.dev)로 접속하세요.' : 'This URL redirects to a login page. Use your deployed official URL.')
+      : escapeHtml(setupErr));
+  document.getElementById('content').innerHTML = `
+    <div class="setup-box" style="max-width:480px;margin:60px auto;padding:24px;border:2px solid #121212;background:#fff">
+      <h2 style="font-size:16px;font-weight:800;margin-bottom:10px">${cfg.lang === 'ko' ? '데이터 로드 실패' : 'Failed to load data'}</h2>
+      <p style="font-size:12px;color:#dc2626;line-height:1.7;word-break:break-all">${detail}</p>
+      <button onclick="loadData().catch(e => showSetup(e))" style="margin-top:14px;padding:8px 18px;font-size:12px;font-weight:700;border:2px solid #121212;background:#121212;color:#fff;cursor:pointer">${cfg.lang === 'ko' ? '다시 시도' : 'Retry'}</button>
+    </div>`;
+}
+
+// ── 이벤트 ──
+
+
+
+// 우측 패널 — 배경 클릭으로 닫지 않음 (✕ 버튼으로만)
+
+// ── 시작 ──
+loadConfig();          // 저장된 설정(lang/자동재생/썸네일) 로드
+applyLang();           // 저장된 언어를 탭에 반영
+renderTabs();
+loadData().catch(e => showSetup(e));
+
+// 리사이즈 핸들 초기화 + 창 크기 변경 시 모바일/데스크톱 전환
+initResize();
+initBackNav();
+window.addEventListener('resize', () => {
+  if (document.getElementById('overlay').classList.contains('open')) applyPanelLayout();
+  positionFloatbar();
+});
+
+// ── 플로팅바: 하단 탭 실제 위치를 감지해 그 위에 배치 (모바일) ──
+function positionFloatbar() {
+  const isMobile = window.innerWidth <= 768;
+  const fb = document.getElementById('floatbar');
+  if (!fb) return;
+  if (!isMobile) {
+    fb.style.bottom = '24px';
+    return;
+  }
+  const tabs = document.querySelector('.tabs');
+  if (!tabs) return;
+  // 하단 탭의 viewport 상단 좌표 → 탭 높이 계산
+  const rect = tabs.getBoundingClientRect();
+  const tabTop = rect.top;                 // 탭 상단 y좌표
+  const tabH = rect.height;                // 탭 높이 (safe-area 포함)
+  const viewportH = window.innerHeight;
+  // 플로팅바 bottom = 탭 위 8px 여유
+  const bottomPx = (viewportH - tabTop) + 8;
+  fb.style.bottom = bottomPx + 'px';
+}
+
+// 초기 실행 (DOM 로드 후)
+positionFloatbar();
+
+// PWA — Service Worker 등록 (오프라인 캐시 + 설치 가능)
+// ⚠️ URL은 반드시 고정(/sw.js) — Date.now() 쿼리를 붙이면
+// 새로고침마다 새 SW로 인식되어 무한 리로드 루프 발생
+// updateViaCache:'none' → SW 스크립트는 항상 네트워크에서 가져옴
+// (배포 후 새 SW 즉시 감지, URL 고정이라 루프 없음)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(reg => {
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }).catch(() => {});
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  });
+}
+
+// ── 상세 페이지 맨 위로 버튼 (detailBox 스크롤 400px 이상에서 표시) ──
+const topBtn = document.getElementById('topBtn');
+const detailBoxEl = () => document.getElementById('detailBox');
+const toggleTopBtn = () => {
+  const isOpen = document.getElementById('overlay').classList.contains('open');
+  const db = detailBoxEl();
+  const st = db ? db.scrollTop : 0;
+  topBtn.style.display = isOpen && st > 400 ? 'flex' : 'none';
+};
+window.addEventListener('scroll', toggleTopBtn, { passive: true });
+topBtn.onclick = () => { const db = detailBoxEl(); if (db) db.scrollTo({ top: 0, behavior: 'smooth' }); };
+toggleTopBtn();
+</script>
+</body>
+</html>

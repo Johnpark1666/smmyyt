@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMMYNP 서버 콘솔</title>
+<link rel="icon" type="image/svg+xml" href="/favicon-gear.svg">
+<link rel="shortcut icon" href="/favicon-gear.svg">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:#fafafa; color:#121212; }
+  .wrap { max-width:960px; margin:0 auto; padding:24px 16px 60px; }
+
+  /* 헤더 */
+  header { display:flex; align-items:center; gap:12px; padding:16px 20px; background:#121212; color:#fff; margin-bottom:20px; }
+  header h1 { font-size:16px; font-weight:800; letter-spacing:.5px; }
+  header .sub { font-size:11px; color:#9ca3af; font-weight:400; }
+  #srvState { margin-left:auto; font-size:11px; font-weight:800; padding:5px 12px; background:#d1fae5; color:#111; border:2px solid #fff; }
+  #srvTime { font-size:10px; color:#9ca3af; font-family:Consolas,monospace; }
+
+  /* 카드 */
+  .card { background:#fff; border:2px solid #121212; margin-bottom:16px; box-shadow:4px 4px 0 rgba(0,0,0,.12); }
+  .card-h { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:2px solid #121212; }
+  .card-h .t { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.8px; }
+  .card-h .icon { font-size:14px; }
+  .card-h .hint { font-size:10px; color:#9ca3af; font-weight:400; margin-left:auto; }
+  .card-b { padding:16px; }
+
+  /* 폼 */
+  label.f { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; margin-bottom:12px; cursor:pointer; }
+  label.f input[type=checkbox] { width:16px; height:16px; accent-color:#121212; }
+  .row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .field { flex:1; min-width:140px; }
+  .field .lb { font-size:11px; color:#6b7280; margin-bottom:4px; font-weight:700; }
+  input[type=text], input[type=password], input[type=number], input[type=time], select {
+    width:100%; padding:9px 10px; font-size:13px; border:2px solid #121212; background:#fff; font-family:inherit; outline:none; border-radius:0;
+  }
+  input:focus, select:focus { background:#f0fdf4; }
+  .btn { padding:10px 16px; font-size:12px; font-weight:800; border:2px solid #121212; background:#fff; cursor:pointer; border-radius:0; font-family:inherit; }
+  .btn.dark { background:#121212; color:#fff; }
+  .btn.red { border-color:#dc2626; color:#dc2626; }
+  .btn:hover { transform:translate(-1px,-1px); box-shadow:2px 2px 0 rgba(0,0,0,.2); }
+  .btn:active { transform:translate(0,0); box-shadow:none; }
+
+  /* 상태/진행 */
+  #srvBarWrap { height:10px; background:#e5e7eb; border:1px solid #d1d5db; margin-bottom:6px; }
+  #srvBar { height:100%; width:0%; background:#0284c7; transition:width .3s; }
+  #srvProgress { font-size:11px; color:#6b7280; margin-bottom:4px; font-weight:700; }
+  #srvCurrentItem { font-size:11px; color:#6b7280; margin-bottom:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #srvLog { font-family:Consolas,monospace; font-size:11px; background:#111; color:#d1d5db; padding:12px; min-height:120px; max-height:220px; overflow-y:auto; white-space:pre-wrap; line-height:1.6; }
+
+  /* 채널 목록 */
+  #srvChannelList { border:2px solid #121212; max-height:340px; overflow-y:auto; background:#fff; }
+  #srvChannelList label { display:flex; align-items:center; gap:8px; font-size:12px; padding:6px 8px; cursor:pointer; border-bottom:1px solid #f3f4f6; }
+  #srvChannelList label:hover { background:#f0fdf4; }
+  #srvChannelList input { width:14px; height:14px; accent-color:#121212; flex-shrink:0; }
+  #srvChannelList .off { opacity:.4; }
+  #srvChannelList .ch-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .msg { font-size:11px; color:#10b981; margin-top:8px; font-weight:700; min-height:14px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:720px) { .grid2 { grid-template-columns:1fr; } }
+  footer { text-align:center; font-size:10px; color:#9ca3af; margin-top:24px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🖥 SMMYNP 서버 콘솔</h1>
+    <span class="sub">미니 PC LAN 서버 관리</span>
+    <span id="srvClock"></span>
+    <span id="srvState">···</span>
+  </header>
+
+  <!-- ═══ 서버 상태 / 수동 조작 ═══ -->
+  <div class="card">
+    <div class="card-h"><span class="icon">⚡</span><span class="t">서버 상태</span><span class="hint">3초 자동 갱신</span></div>
+    <div class="card-b">
+      <div id="srvBarWrap"><div id="srvBar"></div></div>
+      <div id="srvProgress"></div>
+      <div id="srvCurrentItem"></div>
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn dark" onclick="serverRun('youtube')">📺 YouTube 수집+요약</button>
+        <button class="btn" onclick="serverRun('github')">🐙 GitHub 트렌딩</button>
+        <button class="btn red" onclick="serverCancel()">■ 중단</button>
+      </div>
+      <div id="srvLog"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Google 계정 ═══ -->
+  <div class="card">
+    <div class="card-h"><span class="icon">🔗</span><span class="t">Google 계정</span><span class="hint">구독 목록 동기화용</span></div>
+    <div class="card-b">
+      <div class="row" style="margin-bottom:0">
+        <button class="btn" onclick="googleConnect()">🔗 Google 로그인</button>
+        <button class="btn" onclick="srvSyncSubs()">🔄 구독 동기화</button>
+        <span id="srvGoogleEmail" style="font-size:12px;color:#6b7280;align-self:center"></span>
+      </div>
+      <div id="srvGooglePaste" style="display:none;margin-top:10px">
+        <div style="font-size:11.5px;color:#374151;line-height:1.5;margin-bottom:6px">
+          ② 로그인 후 브라우저 주소창이 <b style="color:#dc2626">이 페이지를 열 수 없음</b>이 되면<br>
+          <span style="user-select:all;background:#f4f4f5;padding:2px 6px;border-radius:4px;font-family:monospace">localhost:8788/auth/callback?code=...</span>
+          부분을 <b>전체 복사</b>해서 아래에 붙여넣고 완료:
+        </div>
+        <div class="row" style="margin-bottom:0">
+          <input id="srvGooglePasteUrl" type="text" placeholder="http://localhost:8788/auth/callback?code=..." style="flex:1;font-size:11.5px;padding:7px 9px;border:1px solid #e4e4e7;border-radius:6px">
+          <button class="btn" onclick="googleComplete()">완료</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 자동 요약 설정 ═══ -->
+  <div class="card">
+    <div class="card-h"><span class="icon">⏰</span><span class="t">자동 요약</span><span class="hint">매일 지정 시각 실행</span></div>
+    <div class="card-b">
+      <label class="f"><input type="checkbox" id="srvEnabled"> 자동 요약 활성화</label>
+      <div class="row">
+        <div class="field">
+          <div class="lb">주기</div>
+          <select id="srvInterval" onchange="srvTimeToggle()">
+            <option value="3h">3시간마다</option>
+            <option value="6h">6시간마다</option>
+            <option value="12h">12시간마다</option>
+            <option value="24h">매일</option>
+            <option value="daily">매일 특정 시각</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:140px">
+          <div class="lb">실행 시각</div>
+          <input type="time" id="srvTime" value="19:30">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <div class="lb">최대 영상 길이 (분, 0=무제한)</div>
+          <input type="number" id="srvMaxMin" value="0">
+        </div>
+        <div class="field">
+          <div class="lb">GitHub 트렌딩 포함</div>
+          <div class="row" style="margin-bottom:0;align-items:center">
+            <label class="f" style="margin-bottom:0;flex:0"><input type="checkbox" id="srvIncludeGh"> 포함</label>
+            <input type="number" id="srvGhDays" value="7" min="1" max="30" style="width:70px">
+            <span style="font-size:11px;color:#6b7280">일</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 읽음 자동 정리 -->
+      <div style="margin-top:16px;border-top:2px solid #e5e7eb;padding-top:14px">
+        <div class="lb" style="margin-bottom:8px">읽음 자동 정리 <span id="srvPurgeHint" style="color:#9ca3af;font-weight:400"></span></div>
+        <label class="f" style="margin-bottom:10px"><input type="checkbox" id="srvPurgeRead"> 읽고 별표 안 한 항목 자동 삭제 (deleted와 별개, 물리 삭제)</label>
+        <div class="row" style="margin-bottom:0">
+          <div class="field" style="max-width:200px">
+            <div class="lb">기준일 (읽은 후 경과)</div>
+            <input type="number" id="srvPurgeDays" value="7" min="1" max="365">
+          </div>
+          <span style="font-size:11px;color:#6b7280;align-self:flex-end;padding-bottom:9px">일 후 자동 삭제 · 별표 시 보존</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ AI 제공자 ═══ -->
+  <div class="card">
+    <div class="card-h"><span class="icon">🤖</span><span class="t">AI 제공자</span><span class="hint">요약 엔진</span></div>
+    <div class="card-b">
+      <div class="row">
+        <div class="field">
+          <div class="lb">제공자</div>
+          <select id="srvAiProvider" onchange="srvAiProviderChanged()">
+            <option value="deepseek">DeepSeek</option>
+            <option value="openai">OpenAI</option>
+            <option value="glm">GLM</option>
+            <option value="gemini">Gemini</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="lmstudio">LM Studio (로컬)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="grok">Grok (xAI)</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="lb">모델명</div>
+          <input type="text" id="srvAiModel" placeholder="모델명">
+        </div>
+      </div>
+      <div id="srvAiKeyWrap" style="margin-bottom:10px">
+        <div class="lb">API 키 <span id="srvAiKeyHint" style="color:#9ca3af;font-weight:400"></span></div>
+        <input type="password" id="srvAiKey" placeholder="새 키 입력 (비우면 기존 키 유지)" autocomplete="off">
+      </div>
+      <div id="srvAiUrlWrap" style="margin-bottom:10px;display:none">
+        <div class="lb">LM Studio URL</div>
+        <input type="text" id="srvAiUrl" placeholder="http://127.0.0.1:1234/v1">
+      </div>
+      <div id="srvAiStatus" style="font-size:11px;color:#6b7280"></div>
+    </div>
+  </div>
+
+  <!-- ═══ 텔레그램 알림 ═══ -->
+  <div class="card">
+    <div class="card-h"><span class="icon">📨</span><span class="t">텔레그램 알림</span><span class="hint">작업 완료/오류 알림</span></div>
+    <div class="card-b">
+      <label class="f"><input type="checkbox" id="srvTgEnabled"> 작업 완료/오류 시 알림 보내기</label>
+      <div class="row">
+        <div class="field">
+          <div class="lb">봇 토큰 (BotFather) <span id="srvTgTokenHint" style="color:#9ca3af;font-weight:400"></span></div>
+          <input type="password" id="srvTgToken" placeholder="새 토큰 입력 (비우면 기존 토큰 유지)" autocomplete="off">
+        </div>
+        <div class="field">
+          <div class="lb">대상 (채팅ID:토픽ID)</div>
+          <input type="text" id="srvTgTarget" placeholder="-1004123519287:23">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 자동 요약 대상 채널 ═══ -->
+  <div class="card">
+    <div class="card-h"><span class="icon">📺</span><span class="t">대상 채널</span><span class="hint">선택 안 함 = 전체</span></div>
+    <div class="card-b">
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn" onclick="srvSelAll()" style="flex:1">전체 선택</button>
+        <button class="btn" onclick="srvSelNone()" style="flex:1">선택 해제</button>
+      </div>
+      <div id="srvChannelList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ 저장 ═══ -->
+  <div class="card">
+    <div class="card-b" style="display:flex;gap:8px;align-items:center">
+      <button class="btn dark" onclick="serverSave()" style="flex:1">💾 설정 저장 (서버 적용)</button>
+      <button class="btn" onclick="serverLoad()">↻ 불러오기</button>
+      <div id="srvSettingsMsg" class="msg" style="margin-top:0"></div>
+    </div>
+  </div>
+
+  <footer>SMMYNP Server Console — http://<span id="srvHost"></span>:8788</footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// SMMYNP 서버 콘솔 — 미니 PC LAN 서버 전용
+// API: 같은 서버의 /api/* 라우트 (Rust)
+// ═══════════════════════════════════════════════════════════
+let srvPollTimer = null;
+let lastSrvStatus = 'idle';
+let srvSettingsCache = null;
+
+function escapeHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── 서버 API 호출 ──
+async function srvFetch(url, opts) {
+  try {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    throw new Error('서버 연결 실패 — 미니 PC 서버에서 열어야 합니다 (' + e.message + ')');
+  }
+}
+function srvLog(msg) {
+  const el = document.getElementById('srvLog');
+  el.textContent += (el.textContent ? '\n' : '') + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── 상태 폴링 (3초) ──
+async function serverStatus() {
+  try {
+    const s = await srvFetch('/api/status');
+    const st = document.getElementById('srvState');
+    st.textContent = (s.status || 'idle').toUpperCase();
+    st.style.background = s.status === 'running' ? '#fbbf24' : (s.status === 'completed' || s.status === 'cancelled') ? '#bfdbfe' : '#d1fae5';
+    const total = s.total || 0, cur = s.current || 0;
+    const pct = total > 0 ? Math.min(100, Math.round(cur / total * 100)) : 0;
+    document.getElementById('srvBar').style.width = pct + '%';
+    document.getElementById('srvProgress').textContent = s.status === 'running' ? cur + '/' + total + ' (' + pct + '%)' : (total > 0 ? cur + '/' + total : '');
+    const items = s.currentItems || [];
+    document.getElementById('srvCurrentItem').textContent = (s.status === 'running' && items.length) ? '▶ ' + (items[items.length - 1].title || '') : '';
+    if (s.status === 'running' && s.logs && s.logs.length) {
+      document.getElementById('srvLog').textContent = s.logs.slice(-8).join('\n');
+    }
+    if (lastSrvStatus === 'running' && s.status !== 'running') {
+      srvLog(s.status === 'cancelled' ? '■ 중단됨 (' + cur + '/' + total + ')' : '✅ 완료 (' + cur + '/' + total + ')');
+    }
+    lastSrvStatus = s.status;
+  } catch (e) {
+    document.getElementById('srvState').textContent = '연결 불가';
+    document.getElementById('srvState').style.background = '#fee2e2';
+  }
+}
+
+// ── 수동 조작 ──
+async function serverRun(type) {
+  try {
+    lastSrvStatus = 'idle';
+    document.getElementById('srvBar').style.width = '0%';
+    if (type === 'github') {
+      srvLog('① GitHub 트렌딩 수집 중...');
+      const days = document.getElementById('srvGhDays').value || 7;
+      const f = await srvFetch('/api/github/fetch?days=' + days);
+      const repos = f.repos || [];
+      srvLog('   수집 ' + repos.length + '개 (신규)');
+      if (!repos.length) { srvLog('⚠️ 새 레포 없음'); return; }
+      srvLog('② GitHub 요약 시작 (' + repos.length + '개)...');
+      await srvFetch('/api/github/process-batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repos: repos }) });
+      srvLog('   진행 중 — 로그는 아래에 표시됩니다');
+      serverStatus();
+    } else {
+      srvLog('① 채널 수집 중...');
+      const f = await srvFetch('/api/fetch-videos?days=1');
+      const vids = f.videos || [];
+      srvLog('   수집 ' + vids.length + '개 (쇼츠 제외 ' + (f.ytDlpChecked || 0) + ' / 실패 ' + (f.ytDlpFailed || 0) + ')');
+      if (!vids.length) { srvLog('⚠️ 새 영상 없음'); return; }
+      srvLog('② 요약 시작 (' + vids.length + '개)...');
+      await srvFetch('/api/process-videos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ videos: vids }) });
+      srvLog('   진행 중 — 로그는 아래에 표시됩니다');
+      serverStatus();
+    }
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+async function serverCancel() {
+  try { await srvFetch('/api/process-cancel', { method: 'POST' }); srvLog('■ 중단 요청'); }
+  catch (e) { srvLog('❌ ' + e.message); }
+}
+
+// ── 설정 로드 / 저장 ──
+async function serverLoad() {
+  try {
+    const s = await srvFetch('/api/settings');
+    srvSettingsCache = s;
+    document.getElementById('srvEnabled').checked = s.auto_summary_enabled === '1';
+    document.getElementById('srvInterval').value = s.auto_summary_interval || '6h';
+    document.getElementById('srvTime').value = s.auto_summary_time || '08:00';
+    document.getElementById('srvMaxMin').value = s.auto_summary_max_minutes || '0';
+    document.getElementById('srvIncludeGh').checked = s.auto_summary_include_github === '1';
+    document.getElementById('srvGhDays').value = s.auto_summary_github_days || '7';
+    document.getElementById('srvAiProvider').value = s.ai_provider || 'deepseek';
+    srvAiProviderChanged();
+    document.getElementById('srvTgEnabled').checked = s.telegram_enabled === '1';
+    document.getElementById('srvTgToken').value = '';
+    document.getElementById('srvTgTokenHint').textContent = s.telegram_bot_token ? '(기존 토큰 등록됨 — 교체 시 입력)' : '';
+    document.getElementById('srvTgTarget').value = s.telegram_target || '';
+    document.getElementById('srvPurgeRead').checked = s.auto_purge_read === '1';
+    document.getElementById('srvPurgeDays').value = s.auto_purge_read_days || '7';
+    srvTimeToggle();
+    await srvRenderChannels((s.auto_summary_channels || '').split(',').filter(Boolean));
+    srvLog('설정 불러옴 (자동 요약 ' + (s.auto_summary_enabled === '1' ? 'ON' : 'OFF') + ')');
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+async function serverSave() {
+  try {
+    const body = {
+      auto_summary_enabled: document.getElementById('srvEnabled').checked ? '1' : '0',
+      auto_summary_interval: document.getElementById('srvInterval').value,
+      auto_summary_time: document.getElementById('srvTime').value || '08:00',
+      auto_summary_max_minutes: document.getElementById('srvMaxMin').value || '0',
+      auto_summary_include_github: document.getElementById('srvIncludeGh').checked ? '1' : '0',
+      auto_summary_github_days: document.getElementById('srvGhDays').value || '7',
+      auto_summary_channels: Array.from(document.querySelectorAll('#srvChannelList input.srvChk')).filter(c => c.checked).map(c => c.value).join(','),
+      ai_provider: document.getElementById('srvAiProvider').value,
+      [document.getElementById('srvAiProvider').value + '_model']: document.getElementById('srvAiModel').value,
+      telegram_enabled: document.getElementById('srvTgEnabled').checked ? '1' : '0',
+      telegram_target: document.getElementById('srvTgTarget').value.trim(),
+      auto_purge_read: document.getElementById('srvPurgeRead').checked ? '1' : '0',
+      auto_purge_read_days: document.getElementById('srvPurgeDays').value || '7',
+    };
+    // 텔레그램 토큰 — 비우면 기존 유지 (AI 키와 동일 패턴)
+    const tgToken = document.getElementById('srvTgToken').value.trim();
+    if (tgToken) body.telegram_bot_token = tgToken;
+    // API 키 — 비어있으면 기존 키 유지 (merge_settings는 누락 키를 보존), 입력 시 교체
+    const provider = document.getElementById('srvAiProvider').value;
+    const keyVal = document.getElementById('srvAiKey').value.trim();
+    if (provider === 'lmstudio') {
+      body.lmstudio_url = document.getElementById('srvAiUrl').value.trim();
+    } else if (keyVal) {
+      body[provider + '_key'] = keyVal;
+    }
+    await srvFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const m = document.getElementById('srvSettingsMsg');
+    m.textContent = '✅ 서버에 적용됨';
+    setTimeout(() => { m.textContent = ''; }, 2500);
+    srvLog('설정 저장 → 서버 적용');
+    srvSettingsCache = null;  // 키 상태 재조회
+    await serverLoad();
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+
+// ── 폼 토글 / AI 제공자 ──
+function srvTimeToggle() {
+  const daily = document.getElementById('srvInterval').value === 'daily';
+  // 라벨 + input 포함 .field 전체 토글 (라벨만 남는 orphan 방지)
+  const field = document.getElementById('srvTime').closest('.field');
+  if (field) field.style.display = daily ? 'block' : 'none';
+  document.getElementById('srvTime').style.display = daily ? 'inline-block' : 'none';
+}
+function srvAiProviderChanged() {
+  const p = document.getElementById('srvAiProvider').value;
+  const st = document.getElementById('srvAiStatus');
+  const isLocal = p === 'lmstudio';
+  document.getElementById('srvAiKeyWrap').style.display = isLocal ? 'none' : 'block';
+  document.getElementById('srvAiUrlWrap').style.display = isLocal ? 'block' : 'none';
+  if (!srvSettingsCache) { st.textContent = ''; return; }
+  document.getElementById('srvAiModel').value = srvSettingsCache[p + '_model'] || '';
+  if (isLocal) {
+    const url = srvSettingsCache.lmstudio_url || '';
+    document.getElementById('srvAiUrl').value = url;
+    st.style.color = url ? '#10b981' : '#dc2626';
+    st.textContent = url ? '로컬 서버: ' + url : '⚠️ LM Studio URL 없음';
+  } else {
+    const has = !!(srvSettingsCache[p + '_key']);
+    document.getElementById('srvAiKey').value = '';
+    document.getElementById('srvAiKeyHint').textContent = has ? '(기존 키 등록됨 — 교체 시 입력)' : '';
+    st.style.color = has ? '#10b981' : '#dc2626';
+    st.textContent = has ? 'API 키 등록됨 ✓' : '⚠️ API 키 없음 — 요약 실패할 수 있음';
+  }
+}
+
+// ── 채널 목록 ──
+async function srvRenderChannels(selected) {
+  const list = document.getElementById('srvChannelList');
+  try {
+    const d = await srvFetch('/api/channels');
+    const chs = d.channels || [];
+    list.innerHTML = chs.map(ch => {
+      const id = ch.channelId || '';
+      const active = ch.active !== false;
+      const on = selected.includes(id);
+      return '<label' + (active ? '' : ' class="off"') + '>' +
+        '<input type="checkbox" class="srvChk" value="' + escapeHtml(id) + '"' + (on ? ' checked' : '') + (active ? '' : ' disabled') + '>' +
+        '<span class="ch-name">' + escapeHtml(ch.channelName || id) + (active ? '' : ' (해지됨)') + '</span></label>';
+    }).join('') || '<div style="font-size:11px;color:#9ca3af;padding:8px">채널 없음</div>';
+  } catch (e) {
+    list.innerHTML = '<div style="font-size:11px;color:#dc2626;padding:8px">채널 로드 실패</div>';
+  }
+}
+function srvSelAll() { document.querySelectorAll('#srvChannelList .srvChk').forEach(c => { if (!c.disabled) c.checked = true; }); }
+function srvSelNone() { document.querySelectorAll('#srvChannelList .srvChk').forEach(c => { if (!c.disabled) c.checked = false; }); }
+
+// ── Google ──
+async function srvSyncSubs() {
+  try {
+    srvLog('① Google 구독 목록 불러오는 중...');
+    const d = await srvFetch('/api/youtube/subscriptions');
+    srvLog('   신규 ' + (d.imported || 0) + '개 / 전체 ' + (d.total || 0) + '개 — 해지된 채널은 비활성화됨');
+    await serverLoad();
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+async function googleConnect() {
+  try {
+    // 구글이 사설 IP redirect를 거부(invalid_request)하므로 auth는 localhost로 진행
+    // → 로그인 후 "이 페이지를 열 수 없음"이 뜨면 주소창 URL을 복사해 완료(fallback)
+    const d = await srvFetch('/api/oauth/url?redirect=' + encodeURIComponent('http://localhost:8788/auth/callback'));
+    window.open(d.url, '_blank');
+    srvLog('Google 로그인 창이 열렸습니다 — 로그인 후 주소창 URL을 복사해 붙여넣으세요');
+    document.getElementById('srvGooglePaste').style.display = 'block';
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries++;
+      try {
+        const s = await srvFetch('/api/settings');
+        if (s.google_access_token && s.google_token_updated_at) {
+          // 방금 갱신된 토큰인지 (1분 이내)
+          const age = Date.now() - new Date(s.google_token_updated_at + 'Z').getTime();
+          if (age < 60000) {
+            clearInterval(timer);
+            document.getElementById('srvGoogleEmail').textContent = s.google_email ? '(' + s.google_email + ')' : '';
+            document.getElementById('srvGooglePaste').style.display = 'none';
+            srvLog('✅ Google 연동 완료!');
+          }
+        } else if (tries > 100) { clearInterval(timer); }
+      } catch { /* 재시도 */ }
+    }, 3000);
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+async function googleComplete() {
+  const url = document.getElementById('srvGooglePasteUrl').value.trim();
+  if (!url) { srvLog('⚠️ URL을 붙여넣으세요'); return; }
+  try {
+    srvLog('코드 교환 중...');
+    const d = await srvFetch('/api/oauth/complete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url }) });
+    if (d.success) {
+      srvLog('✅ Google 연동 완료! ' + (d.email && d.email !== 'undefined' ? '(' + d.email + ')' : ''));
+      document.getElementById('srvGoogleEmail').textContent = d.email && d.email !== 'undefined' ? '(' + d.email + ')' : '';
+      document.getElementById('srvGooglePaste').style.display = 'none';
+      serverLoad();
+    } else {
+      srvLog('❌ 실패: ' + (d.detail || d.status || '알 수 없는 오류') + ' — URL 전체(코드 포함)를 다시 복사했는지 확인');
+    }
+  } catch (e) { srvLog('❌ ' + e.message); }
+}
+
+// ── 초기화 ──
+srvTimeToggle();
+(function init() {
+  srvLog('서버 연결 확인 중...');
+  serverLoad();
+  serverStatus();
+  srvFetch('/api/settings').then(s => {
+    if (s.google_email) document.getElementById('srvGoogleEmail').textContent = '(' + s.google_email + ')';
+  }).catch(() => {});
+  srvPollTimer = setInterval(serverStatus, 3000);
+  // 헤더 시계 1초 갱신 + 푸터 호스트 표시
+  const tick = () => { const el = document.getElementById('srvClock'); if (el) el.textContent = new Date().toLocaleString('ko-KR'); };
+  tick();
+  setInterval(tick, 1000);
+  const host = document.getElementById('srvHost');
+  if (host) host.textContent = location.hostname;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Secrets & Credentials
+.env
+.env.local
+.env.production
+google_credentials.json
+google_credentailsforsheet.json
+tokens.json
+
+# Dependencies
+node_modules/
+
+# Build outputs
+client/dist/
+
+# Scratch & Temp
+/scratch/
+
+# IDEs & System files
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Hermes Agent (personal workspace data)
+.hermes/
+
+# Tauri
+/src-tauri/gen/schemas
+/src-tauri/target/
+
+# Cloudflare Wrangler
+.wrangler
